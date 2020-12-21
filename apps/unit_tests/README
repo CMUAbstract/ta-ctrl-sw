@@ -1,0 +1,90 @@
+The following lists the tests and the flags associated with them.
+
+To run a test, build the unit test with that flag set to 1. Only set one flag at
+a time.
+
+Example: make apps/unit_tests/bld/gcc/all UNIT_TEST_ECHO=1
+
+Note that these are not formal unit tests that will give a definitive
+pass/fail-- you'll need to check if the correct actions are happening on the
+board.
+
+POWER ON:
+  FLAG: UNIT_TEST_POWER_ON
+  DESCRIPTION: Just boots the system, waits for 8 seconds, and then turns off
+  the GNSS enable output GPIO
+  OBSERVABLE BEHAVIOR: The GPIO output pin goes from high to low and stays low.
+
+ECHO:
+  FLAG: UNIT_TEST_ECHO
+  DESCRIPTION: Boots the system and enables the uartlink 0 (on pins 2.0/2.1)
+  Receives message over the uart and returns that message over the same uart
+  port.
+  OBSERVABLE BEHAVIOR: If you use the echo script in scripts, you'll see the
+  phrases you send over uart returned.
+
+UART_ADC:
+  FLAG: UNIT_TEST_UART_ADC
+  DESCRIPTION: Boots the system, enables uartlink 0 (on pins 2.0/2.1), also
+  boots the ADC. Echoes messages sent over uart 0 and reports ADC values over
+  uart 0.
+  OBSERVABLE BEHAVIOR: If the control board is hooked to the power board this
+  should print out the harvested energy voltage and echo phrases sent to it.
+
+MULTI_UART_TX:
+  FLAG: UNIT_TEST_MULTI_UART_TX
+  DESCRIPTION: Sends the same message over all three uartlinks
+  OBSERVABLE BEHAVIOR: The same, repeated output appears at all three uart
+  outputs
+
+MAILBOX
+  FLAG: UNIT_TEST_MAILBOX
+  DESCRIPTION: Receives messages on uartlinks 0 and 1 (pins 2.5/2.6), writes
+  messages back out over uart 0
+  OBSERVABLE BEHAVIOR: Messages sent to both uart 0 and 1 should be written back
+  out of uart 1
+
+ADC
+  FLAG: UNIT_TEST_ADC
+  DESCRIPTION: Confirms that the ADC (and the i2c drivers) are working correctly
+  OBSERVABLE BEHAVIOR: Just prints out the voltage of the harvested energy, also
+  toggles the EXP_EN pin
+
+ACKS
+  FLAG: UNIT_TEST_ACKS
+  DESCRIPTION: Tests the connenction between the control board and the comm
+  board as well as between the control board and the experiment board
+  OBSERVABLE BEHAVIOR: Prints "Good" over uartlink 0 if both tests are
+  successful, prints "Bad" if not
+
+COMM_REPEAT
+  FLAG: UNIT_TEST_COMM_REPEAT
+  DESCRIPTION: Repeatedly transmits a message over the comm board and power
+  cycles the comm board
+  OBSERVABLE BEHAVIOR: Using a software defined radio, or another openlst board,
+  you should be able to capture a transmitted message every 9 seconds
+
+COMM_TX_LONG
+  FLAG: UNIT_TEST_COMM_TX_LONG
+  DESCRIPTION: Repeatedly transmits a really long message, every 2 seconds.
+  OBSERVABLE BEHAVIOR: Using a software defined radio, or another openlst board,
+  you should be able to capture a really long message every 2 seconds
+
+BURN_WIRE
+  FLAG: UNIT_TEST_BURN_WIRE
+  DESCRIPTION: Enables the burn wire circuit
+  OBSERVABLE BEHAVIOR: If the satellite is fully assembled (i.e. fishing
+  line, burn wire, comm board, control board, power board are all in place) then
+  this will cause a large current to sink from the capacitor through the burn
+  wire circuit and burn off the fishing line.  If nothing is connected, this
+  will just pulse the burn wire GPIO
+
+
+GNSS
+  FLAG: UNIT_TEST_GNSS
+  DESCRIPTION: Tests the GNSS module
+  OBSERVABLE BEHAVIOR: If you take the satellite over by a window, you'll see
+  the current gps coordinates printed out after the satellite gets a fix. We
+  allow the satellite 60 seconds to get a fix.
+
+

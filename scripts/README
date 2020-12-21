@@ -1,0 +1,7 @@
+Several auxiliary scripts to test/exercise control board
+
+multi_uart_test.py: Writes out data over UART to the control board on two
+channels and reads it back in on one. The read/write addresses are hardcoded in
+the script.
+
+echo_test.py: simple echo script to be used alongside the echo unit test
