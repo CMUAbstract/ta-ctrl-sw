@@ -39,12 +39,13 @@ Using this repo:
 * Clone:
     git clone --recursive <this repo name>
 
-* Deps: The following dependencies are required
+* Deps: The following dependencies are required and were tested on Linux Mint
 
 [mspgcc](https://www.ti.com/tool/download/MSP430-GCC-OPENSOURCE): This code was
 tested using version 8.3.1.25 . Download from the link using the all in one
-installer. Double check the path- it should be installed at /opt/ti/mspgcc --
-then add the following to your .bashrc file:
+installer (msp430-gcc-full-linux-x64-installer-8.3.1.0.run for linux). Double
+check the path- it should be installed at /opt/ti/mspgcc -- then add the
+following to your .bashrc file:
 
     export MSPDEBUG_TILIB_PATH=/opt/ti/mspgcc/bin
 
