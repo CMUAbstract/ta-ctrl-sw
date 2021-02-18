@@ -29,6 +29,10 @@ uint8_t mailbox[16];
 uint8_t mailbox1[16];
 uint8_t adc_vals[4];
 
+#define MAGIC_NUMBER 0xABCD
+
+__nv uint16_t first_prog = MAGIC_NUMBER;
+
 int main(void) {
   artibeus_init();
   // Enable
@@ -261,6 +265,22 @@ int main(void) {
         PRINTF("%c",buffer[i]);
       }
       __delay_cycles(8000000);
+    }
+#endif
+#ifdef TEST_XFER
+    // Turn on EXPT board to dump bytes
+    EXP_ENABLE;
+    COMM_ENABLE; // Required for cntrl board v0 where we mixed up power rails
+    uartlink_open_tx(1);
+    expt_write_jump();
+    uartlink_close(1);
+    uartlink_open_rx(1);
+    while(1) {
+      for(int i = 0; i < 5; i++) {
+        __delay_cycles(8000000);
+      }
+      // Try dis
+      expt_write_program();
     }
 #endif
 }

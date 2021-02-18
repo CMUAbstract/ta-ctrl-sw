@@ -51,3 +51,7 @@ endif
 ifneq ($(UNIT_TEST_GNSS),)
 override CFLAGS += -DTEST_GNSS
 endif
+
+ifneq ($(UNIT_TEST_XFER),)
+override CFLAGS += -DTEST_XFER
+endif
