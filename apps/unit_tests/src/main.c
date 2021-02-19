@@ -271,6 +271,10 @@ int main(void) {
     // Turn on EXPT board to dump bytes
     EXP_ENABLE;
     COMM_ENABLE; // Required for cntrl board v0 where we mixed up power rails
+    while(1) {
+      expt_ack_check();
+      __delay_cycles(4000000);
+    }
     uartlink_open_tx(1);
     expt_write_jump();
     uartlink_close(1);
