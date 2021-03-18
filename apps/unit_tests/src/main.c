@@ -35,8 +35,8 @@ __nv uint16_t first_prog = MAGIC_NUMBER;
 
 int main(void) {
   artibeus_init();
-  // Enable
-  /*(GPIO(LIBARTIBEUS_PORT_EXP_EN, DIR) |= BIT(LIBARTIBEUS_PIN_EXP_EN);
+  // Enable Everything
+  GPIO(LIBARTIBEUS_PORT_EXP_EN, DIR) |= BIT(LIBARTIBEUS_PIN_EXP_EN);
   GPIO(LIBARTIBEUS_PORT_EXP_EN, OUT) |= BIT(LIBARTIBEUS_PIN_EXP_EN);
 
   GPIO(LIBARTIBEUS_PORT_COMM_EN, DIR) |= BIT(LIBARTIBEUS_PIN_COMM_EN);
@@ -44,7 +44,7 @@ int main(void) {
 
   GPIO(LIBARTIBEUS_PORT_GNSS_EN, DIR) |= BIT(LIBARTIBEUS_PIN_GNSS_EN);
   GPIO(LIBARTIBEUS_PORT_GNSS_EN, OUT) |= BIT(LIBARTIBEUS_PIN_GNSS_EN);
-  */
+  uartlink_open(1); // Note, uartlinks 0 and 2  get opened in artibeus init
   int count = 0;
   msg[0] = 'E';
   msg[1] = 'F';
