@@ -24,6 +24,10 @@ export LIBMSP_SLEEP_TIMER = B.0.0
 export LIBMSP_SLEEP_TIMER_CLK = ACLK
 export LIBMSP_SLEEP_TIMER_DIV = 8*1
 
+# Turn on/off existing processing in the Comm uart handler
+export LIBMSPUARTLINK_NO_PROCESS = 1
+
+
 # COMM UART
 export LIBMSPUARTLINK0_UART_IDX = 0
 export LIBMSPUARTLINK0_PIN_TX = 2.0
