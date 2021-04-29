@@ -87,4 +87,11 @@ GNSS
   the current gps coordinates printed out after the satellite gets a fix. We
   allow the satellite 60 seconds to get a fix.
 
+MAILBOX_COMMAND_PARSE
+  FLAG: UNIT_TEST_MAILBOX_COMMAND_PARSE
+  DESCRIPTION: Boots the system and enables the uartlink 0 for the expt side.
+  Receives commands over uart and parses these commands byte by byte.
+  OBSERVABLE BEHAVIOR: If you use the command_parse script in scripts, you
+  will see the parsed information collected from the command received over 
+  uart 0 and sent over uart 1 returned.
 

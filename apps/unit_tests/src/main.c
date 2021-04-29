@@ -36,6 +36,7 @@ __nv uint16_t first_prog = MAGIC_NUMBER;
 int main(void) {
   artibeus_init();
   // Enable Everything
+
   GPIO(LIBARTIBEUS_PORT_EXP_EN, DIR) |= BIT(LIBARTIBEUS_PIN_EXP_EN);
   GPIO(LIBARTIBEUS_PORT_EXP_EN, OUT) |= BIT(LIBARTIBEUS_PIN_EXP_EN);
 
@@ -44,7 +45,9 @@ int main(void) {
 
   GPIO(LIBARTIBEUS_PORT_GNSS_EN, DIR) |= BIT(LIBARTIBEUS_PIN_GNSS_EN);
   GPIO(LIBARTIBEUS_PORT_GNSS_EN, OUT) |= BIT(LIBARTIBEUS_PIN_GNSS_EN);
+
   uartlink_open(1); // Note, uartlinks 0 and 2  get opened in artibeus init
+
   int count = 0;
   msg[0] = 'E';
   msg[1] = 'F';
@@ -59,12 +62,14 @@ int main(void) {
   // Make sure we correctly turn _off_ the GNSS enable
   while(1) {
     // Wait 8 seconds
+    GPIO(LIBARTIBEUS_PORT_GNSS_EN, OUT) |= BIT(LIBARTIBEUS_PIN_GNSS_EN);
+    GPIO(LIBARTIBEUS_PORT_GNSS_EN, DIR) |= BIT(LIBARTIBEUS_PIN_GNSS_EN);
     for (int i = 0; i < 8; i++) {
       __delay_cycles(8000000);
     }
     GPIO(LIBARTIBEUS_PORT_GNSS_EN, OUT) &= ~BIT(LIBARTIBEUS_PIN_GNSS_EN);
-    // Wait 3 ms
-    __delay_cycles(24000);
+    // Wait 2 seconds
+    __delay_cycles(16000000);
   }
 #endif
 #ifdef TEST_ECHO
@@ -138,20 +143,25 @@ int main(void) {
 #endif // multiple uarts tx
 #ifdef TEST_MAILBOX
   while(1) {
+    uartlink_open(1);
     int count = 0;
     while(!count) {
       count = uartlink_receive_basic(0,mailbox,8);
     }
+    /*
     count = 0;
     while(!count) {
       count = uartlink_receive_basic(1,mailbox1,8);
     }
+    */
     mailbox[7] = '\n';
-    mailbox1[7] = '\n';
-    uartlink_send_basic(0,mailbox,8);
+    //mailbox1[7] = '\n';
+    uartlink_send_basic(1,mailbox,8);
     __delay_cycles(4000000);
+    /*
     uartlink_send_basic(0,mailbox1,8);
     __delay_cycles(4000000);
+    */
   }
 #endif // multiple UARTS TX/RX
 #ifdef TEST_ADC
@@ -287,6 +297,52 @@ int main(void) {
       expt_write_program();
     }
 #endif
+#ifdef TEST_MAILBOX_COMMAND_PARSE
+
+    //Turn on expt uart
+    uartlink_open(1);
+
+    while(1){
+  
+      count = 0;
+      while(!count) {
+        count = uartlink_receive_basic(0,mailbox,9);
+      }
+      //Check for first start byte
+      if (mailbox[0] == 0x22){
+        uint8_t ack_1[23] = {"First start byte found\n"};
+
+        uartlink_send_basic(1,ack_1,23);
+        //__delay_cycles(4000000);
+      }
+      
+      //Check for second start byte
+      if (mailbox[1] == 0x69){
+        uint8_t ack_2[24] = {"Second start byte found\n"};
+
+        uartlink_send_basic(1,ack_2,24);
+        //__delay_cycles(4000000);
+      }
+      
+      //Check for length byte
+      
+      uint8_t len_of_command = mailbox[2];
+      //Converts length digit to ascii format
+      uint8_t len_hex = len_of_command + 0x30;
+      uint8_t ack_len[24] = {"Length of command is:  \n"};
+      ack_len[22] = len_hex;
+      uartlink_send_basic(1,ack_len,24);
+      
+
+      //uartlink_send_basic(1,mailbox,10);
+      __delay_cycles(4000000);
+
+    }
+
+
+#endif
 }
+
+
 
 

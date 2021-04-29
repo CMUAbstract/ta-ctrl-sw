@@ -5,3 +5,7 @@ channels and reads it back in on one. The read/write addresses are hardcoded in
 the script.
 
 echo_test.py: simple echo script to be used alongside the echo unit test
+
+command_parse.py: simple script to send a hardcoded command and receive parsed 
+information about the command sent.  To be used along aside mailbox_command_parse 
+test.

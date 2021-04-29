@@ -55,3 +55,7 @@ endif
 ifneq ($(UNIT_TEST_XFER),)
 override CFLAGS += -DTEST_XFER
 endif
+
+ifneq ($(UNIT_TEST_MAILBOX_COMMAND_PARSE),)
+override CFLAGS += -DTEST_MAILBOX_COMMAND_PARSE
+endif
