@@ -46,7 +46,7 @@ ACK = 0x10
 total_len = 6
 #Command for COMMON_ACK
 common_ack = bytearray([START_BYTE0, START_BYTE1, total_len, hwid_lsb, hwid_msb, 
-						msgid_lsb, , dest, ACK])
+						msgid_lsb, msgid_msb, dest, ACK])
 
 #Send command for parsing to comm TX
 serWrite.write(common_ack);
@@ -59,6 +59,6 @@ time.sleep(1);
 serData = serRead.readline();
 print("Output is: ", serData);
 time.sleep(1);
-#Prints entire message received
+#Prints length of the command from command byte
 serData = serRead.readline();
 print("Output is: ", serData);
