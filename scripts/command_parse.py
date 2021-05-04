@@ -41,24 +41,59 @@ hwid_msb = 66
 msgid_lsb = 67
 msgid_msb = 68
 dest = 1
-ACK = 0x10
+opcode = 0x10
 
 total_len = 6
 #Command for COMMON_ACK
 common_ack = bytearray([START_BYTE0, START_BYTE1, total_len, hwid_lsb, hwid_msb, 
-						msgid_lsb, msgid_msb, dest, ACK])
+						msgid_lsb, msgid_msb, dest, opcode])
 
 #Send command for parsing to comm TX
-serWrite.write(common_ack);
-time.sleep(1);
+serWrite.write(common_ack)
+time.sleep(1)
 #Read first start byte ack
-serData = serRead.readline();
-print("Output is: ", serData);
-time.sleep(1);
+serData = serRead.readline()
+print(serData)
+time.sleep(1)
 #Read second start byte ack
-serData = serRead.readline();
-print("Output is: ", serData);
-time.sleep(1);
+serData = serRead.readline()
+print(serData)
+time.sleep(1)
 #Prints length of the command from command byte
-serData = serRead.readline();
-print("Output is: ", serData);
+serData = serRead.readline()
+len_of_command = ord(serData[23])
+serData = serData[0:23] + str(ord(serData[23])) + '\n'
+print(serData)
+time.sleep(1)
+#Read HW_ID_LSB byte
+serData = serRead.readline()
+serData = serData[0:12] + hex(ord(serData[12])) + '\n'
+print(serData)
+time.sleep(1)
+#Read HW_ID_MSB byte
+serData = serRead.readline()
+serData = serData[0:12] + hex(ord(serData[12])) + '\n'
+print(serData)
+time.sleep(1)
+#Read MSG_ID_LSB byte
+serData = serRead.readline()
+serData = serData[0:13] + hex(ord(serData[13])) + '\n'
+print(serData)
+time.sleep(1)
+#Read MSG_ID_MSB byte
+serData = serRead.readline()
+serData = serData[0:13] + hex(ord(serData[13])) + '\n'
+print(serData)
+time.sleep(1)
+
+#Prints entire message in byte format
+print("Entire Command sent:")
+message_str = ""
+serData = serRead.readline()
+#Added 3 for the first three bytes (start_byte0, start_byte1 and length_byte)
+#Added 1 because of bug where first byte gets repeated
+for i in range(len_of_command+3+1):
+	message_str += hex(ord(serData[i])) + " "
+
+print(message_str)
+

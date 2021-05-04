@@ -308,6 +308,7 @@ int main(void) {
       while(!count) {
         count = uartlink_receive_basic(0,mailbox,9);
       }
+      //__delay_cycles(4000000);
       //Check for first start byte
       if (mailbox[0] == 0x22){
         uint8_t ack_1[23] = {"First start byte found\n"};
@@ -325,13 +326,39 @@ int main(void) {
       }
       
       //Check for length byte
-      
       uint8_t len_of_command = mailbox[2];
-      //Converts length digit to ascii format
-      uint8_t len_hex = len_of_command + 0x30;
       uint8_t ack_len[24] = {"Length of command is:  \n"};
-      ack_len[22] = len_hex;
+      ack_len[22] = len_of_command;
       uartlink_send_basic(1,ack_len,24);
+
+      //Check for hw_id_lsb byte
+      uint8_t hw_id_lsb = mailbox[3];
+      uint8_t ack_hw_id_lsb[13] = {"HW_ID_LSB:  \n"};
+      ack_hw_id_lsb[11] = hw_id_lsb;
+      uartlink_send_basic(1,ack_hw_id_lsb,13);
+
+      //Check for hw_id_msb byte
+      uint8_t hw_id_msb = mailbox[4];
+      uint8_t ack_hw_id_msb[13] = {"HW_ID_MSB:  \n"};
+      ack_hw_id_msb[11] = hw_id_msb;
+      uartlink_send_basic(1,ack_hw_id_msb,13);
+
+      //Check for msg_id_lsb byte
+      uint8_t msg_id_lsb = mailbox[5];
+      uint8_t ack_msg_id_lsb[14] = {"MSG_ID_LSB:  \n"};
+      ack_msg_id_lsb[12] = msg_id_lsb;
+      uartlink_send_basic(1,ack_msg_id_lsb,14);
+
+      //Check for msg_id_msb byte
+      uint8_t msg_id_msb = mailbox[6];
+      uint8_t ack_msg_id_msb[14] = {"MSG_ID_MSB:  \n"};
+      ack_msg_id_msb[12] = msg_id_msb;
+      uartlink_send_basic(1,ack_msg_id_msb,14);
+
+      //Sends over entire command
+      uartlink_send_basic(1,mailbox,9);
+
+
       
 
       //uartlink_send_basic(1,mailbox,10);
