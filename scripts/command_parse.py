@@ -34,22 +34,39 @@ serRead = serial.Serial('/dev/ttyACM1',115200,timeout=1);
 serWrite = serial.Serial('/dev/ttyUSB0',115200);
 
 
+#Command for COMMON_ACK
 START_BYTE0 = 0x22
 START_BYTE1 = 0x69
-hwid_lsb =65
-hwid_msb = 66
-msgid_lsb = 67
-msgid_msb = 68
+hwid_lsb_ack =65
+hwid_msb_ack = 66
+msgid_lsb_ack = 67
+msgid_msb_ack = 68
 dest = 1
 opcode = 0x10
 
-total_len = 6
-#Command for COMMON_ACK
-common_ack = bytearray([START_BYTE0, START_BYTE1, total_len, hwid_lsb, hwid_msb, 
-						msgid_lsb, msgid_msb, dest, opcode])
+total_len_ack = 6
 
+common_ack = bytearray([START_BYTE0, START_BYTE1, total_len_ack, hwid_lsb_ack, 
+						hwid_msb_ack, msgid_lsb_ack, msgid_msb_ack, dest, opcode])
+
+#Command for COMMON_ASCII
+total_len_ascii = 17
+hwid_lsb_ascii = 85
+hwid_msb_ascii = 86
+msgid_lsb_ascii = 87
+msgid_msb_ascii = 88
+#Ascii data is "Hello World" in hex
+common_ascii = bytearray([START_BYTE0, START_BYTE1, total_len_ascii, hwid_lsb_ascii, 
+						hwid_msb_ascii, msgid_lsb_ascii, msgid_msb_ascii, dest, opcode,
+						0x48,0x65,0x6c,0x6c,0x6f, 
+						0x20,0x57,0x6f,0x72,0x6c,0x64])
+
+
+#Send first three bytes of command to comm TX so as to retreive length of command
+serWrite.write(common_ascii[0:3])
+time.sleep(1)
 #Send command for parsing to comm TX
-serWrite.write(common_ack)
+serWrite.write(common_ascii)
 time.sleep(1)
 #Read first start byte ack
 serData = serRead.readline()
@@ -87,7 +104,9 @@ print(serData)
 time.sleep(1)
 
 #Prints entire message in byte format
-print("Entire Command sent:")
+serData = serRead.readline()
+print(serData[0:21])
+time.sleep(1)
 message_str = ""
 serData = serRead.readline()
 #Added 3 for the first three bytes (start_byte0, start_byte1 and length_byte)

@@ -27,6 +27,7 @@
 uint8_t msg[8] = {"ARTIBEUS"};
 uint8_t mailbox[16];
 uint8_t mailbox1[16];
+uint8_t mailbox2[260];
 uint8_t adc_vals[4];
 
 #define MAGIC_NUMBER 0xABCD
@@ -305,63 +306,68 @@ int main(void) {
     while(1){
   
       count = 0;
+      //Read in first 3 bytes of command so as to retreive length of rest of command
       while(!count) {
-        count = uartlink_receive_basic(0,mailbox,9);
+        count = uartlink_receive_basic(0,mailbox,3);
       }
-      //__delay_cycles(4000000);
+
+      uint8_t len_of_command = mailbox[2];
+      //Added 3 for the first three bytes (start_byte0, start_byte1 and length_byte)
+      uint8_t entire_len = len_of_command + 3;
+      count = 0;
+      //Read in entire command into buffer of reasonable length
+      while(!count) {
+        count = uartlink_receive_basic(0,mailbox2,entire_len);
+      }
       //Check for first start byte
-      if (mailbox[0] == 0x22){
+      if (mailbox2[0] == 0x22){
         uint8_t ack_1[23] = {"First start byte found\n"};
 
         uartlink_send_basic(1,ack_1,23);
-        //__delay_cycles(4000000);
       }
       
       //Check for second start byte
-      if (mailbox[1] == 0x69){
+      if (mailbox2[1] == 0x69){
         uint8_t ack_2[24] = {"Second start byte found\n"};
 
         uartlink_send_basic(1,ack_2,24);
-        //__delay_cycles(4000000);
       }
       
       //Check for length byte
-      uint8_t len_of_command = mailbox[2];
       uint8_t ack_len[24] = {"Length of command is:  \n"};
       ack_len[22] = len_of_command;
       uartlink_send_basic(1,ack_len,24);
 
       //Check for hw_id_lsb byte
-      uint8_t hw_id_lsb = mailbox[3];
+      uint8_t hw_id_lsb = mailbox2[3];
       uint8_t ack_hw_id_lsb[13] = {"HW_ID_LSB:  \n"};
       ack_hw_id_lsb[11] = hw_id_lsb;
       uartlink_send_basic(1,ack_hw_id_lsb,13);
 
       //Check for hw_id_msb byte
-      uint8_t hw_id_msb = mailbox[4];
+      uint8_t hw_id_msb = mailbox2[4];
       uint8_t ack_hw_id_msb[13] = {"HW_ID_MSB:  \n"};
       ack_hw_id_msb[11] = hw_id_msb;
       uartlink_send_basic(1,ack_hw_id_msb,13);
 
       //Check for msg_id_lsb byte
-      uint8_t msg_id_lsb = mailbox[5];
+      uint8_t msg_id_lsb = mailbox2[5];
       uint8_t ack_msg_id_lsb[14] = {"MSG_ID_LSB:  \n"};
       ack_msg_id_lsb[12] = msg_id_lsb;
       uartlink_send_basic(1,ack_msg_id_lsb,14);
 
       //Check for msg_id_msb byte
-      uint8_t msg_id_msb = mailbox[6];
+      uint8_t msg_id_msb = mailbox2[6];
       uint8_t ack_msg_id_msb[14] = {"MSG_ID_MSB:  \n"};
       ack_msg_id_msb[12] = msg_id_msb;
       uartlink_send_basic(1,ack_msg_id_msb,14);
 
       //Sends over entire command
-      uartlink_send_basic(1,mailbox,9);
+      uint8_t ack_comm[21] = {"Entire Command sent:\n"};
+      uartlink_send_basic(1,ack_comm,21);
+      uartlink_send_basic(1,mailbox2,entire_len);
 
 
-      
-
-      //uartlink_send_basic(1,mailbox,10);
       __delay_cycles(4000000);
 
     }
