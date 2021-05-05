@@ -61,12 +61,12 @@ common_ascii = bytearray([START_BYTE0, START_BYTE1, total_len_ascii, hwid_lsb_as
 						0x48,0x65,0x6c,0x6c,0x6f, 
 						0x20,0x57,0x6f,0x72,0x6c,0x64])
 
-
+sent_comm = common_ascii #Change this array to test different commands
 #Send first three bytes of command to comm TX so as to retreive length of command
-serWrite.write(common_ascii[0:3])
+serWrite.write(sent_comm[0:3])
 time.sleep(1)
 #Send command for parsing to comm TX
-serWrite.write(common_ascii)
+serWrite.write(sent_comm)
 time.sleep(1)
 #Read first start byte ack
 serData = serRead.readline()
@@ -78,40 +78,39 @@ print(serData)
 time.sleep(1)
 #Prints length of the command from command byte
 serData = serRead.readline()
-len_of_command = ord(serData[23])
-serData = serData[0:23] + str(ord(serData[23])) + '\n'
+len_of_command = ord(serData[22])
+serData = serData[0:22] + str(ord(serData[22])) + '\n'
 print(serData)
 time.sleep(1)
 #Read HW_ID_LSB byte
 serData = serRead.readline()
-serData = serData[0:12] + hex(ord(serData[12])) + '\n'
+serData = serData[0:11] + hex(ord(serData[11])) + '\n'
 print(serData)
 time.sleep(1)
 #Read HW_ID_MSB byte
 serData = serRead.readline()
-serData = serData[0:12] + hex(ord(serData[12])) + '\n'
+serData = serData[0:11] + hex(ord(serData[11])) + '\n'
 print(serData)
 time.sleep(1)
 #Read MSG_ID_LSB byte
 serData = serRead.readline()
-serData = serData[0:13] + hex(ord(serData[13])) + '\n'
+serData = serData[0:12] + hex(ord(serData[12])) + '\n'
 print(serData)
 time.sleep(1)
 #Read MSG_ID_MSB byte
 serData = serRead.readline()
-serData = serData[0:13] + hex(ord(serData[13])) + '\n'
+serData = serData[0:12] + hex(ord(serData[12])) + '\n'
 print(serData)
 time.sleep(1)
 
 #Prints entire message in byte format
 serData = serRead.readline()
-print(serData[0:21])
+print(serData[0:20])
 time.sleep(1)
 message_str = ""
 serData = serRead.readline()
 #Added 3 for the first three bytes (start_byte0, start_byte1 and length_byte)
-#Added 1 because of bug where first byte gets repeated
-for i in range(len_of_command+3+1):
+for i in range(len_of_command+3):
 	message_str += hex(ord(serData[i])) + " "
 
 print(message_str)
