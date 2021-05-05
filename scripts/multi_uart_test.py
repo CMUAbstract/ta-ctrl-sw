@@ -11,10 +11,10 @@ serWrite1 = serial.Serial('/dev/ttyACM3',115200);
 
 count = 0;
 
-words = [b'TESTERSS', b'ORIOLESS', b'STEELERS', b'BASEBALL', \
+words = [b'TESTERS1', b'ORIOLES1', b'STEELERS', b'BASEBALL', \
         b'FOOTBALL', b'CAMPSITE']
 
-words1 = [b'testerss', b'orioless', b'steelers', b'baseball', \
+words1 = [b'testers1', b'orioles1', b'steelers', b'baseball', \
         b'football', b'campsite']
 
 while True:
