@@ -1,27 +1,27 @@
 [submodule "tools/maker"]
 	path = tools/maker
-	url = git@github.com:CMUAbstract/maker.git
+	url = ../maker.git
 [submodule "ext/libmspware"]
 	path = ext/libmspware
-	url = git@github.com:CMUAbstract/libmspware.git
+	url = ../libmspware.git
 [submodule "ext/libmsp"]
 	path = ext/libmsp
-	url = git@github.com:CMUAbstract/libmsp.git
+	url = ../libmsp.git
 [submodule "ext/libio"]
 	path = ext/libio
-	url = git@github.com:CMUAbstract/libio.git
+	url = ../libio.git
 [submodule "ext/libmspuartlink"]
 	path = ext/libmspuartlink
-	url = git@github.com:CMUAbstract/libmspuartlink.git
+	url = ../libmspuartlink.git
 [submodule "ext/libfixed"]
 	path = ext/libfixed
-	url = git@github.com:CMUAbstract/libfixed.git
+	url = ../libfixed.git
 [submodule "ext/libartibeus"]
 	path = ext/libartibeus
-	url = git@github.com:CMUAbstract/libartibeus-ctrl.git
+	url = ../libartibeus-ctrl.git
 [submodule "ext/libads"]
 	path = ext/libads
-	url = git@github.com:CMUAbstract/libads.git
+	url = ../libads.git
 [submodule "ext/libgnss"]
 	path = ext/libgnss
-	url = git@github.com:CMUAbstract/libgnss.git
+	url = ../libgnss.git
