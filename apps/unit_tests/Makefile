@@ -59,3 +59,9 @@ endif
 ifneq ($(UNIT_TEST_MAILBOX_COMMAND_PARSE),)
 override CFLAGS += -DTEST_MAILBOX_COMMAND_PARSE
 endif
+
+ifneq ($(UNIT_TEST_EXPT_SET_TIME),)
+override CFLAGS += -DTEST_EXPT_SET_TIME
+endif
+
+

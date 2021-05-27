@@ -25,3 +25,6 @@
 [submodule "ext/libgnss"]
 	path = ext/libgnss
 	url = ../libgnss.git
+[submodule "ext/liblsm9ds1"]
+	path = ext/liblsm9ds1
+	url = ../liblsm9ds1.git

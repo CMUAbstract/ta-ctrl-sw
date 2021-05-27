@@ -372,6 +372,30 @@ int main(void) {
 
 
 #endif
+#ifdef TEST_EXPT_SET_TIME
+  uartlink_open(1);
+  uint32_t time = 675379830;
+  uint8_t decimal[4] = {0x30, 0x75, 0x00, 0x00};
+  while(1) {
+    uint8_t new_time[8];
+   // Start on
+   uint32_t mask = 0xFF;
+   uint32_t shift = 0;
+    for (int i = 0; i < 4; i++) {
+      new_time[i] = (time & mask) >> shift;
+      shift += 8;
+      mask = mask << 8;
+    }
+    for (int i = 0; i < 4; i++) {
+      new_time[4 + i] = decimal[i];
+    }
+    expt_set_time(new_time);
+   // Increment time
+   time++;
+   // Delay 1 second
+    __delay_cycles(8000000);
+  }
+#endif
 }
 
 
