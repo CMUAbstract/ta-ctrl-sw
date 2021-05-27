@@ -95,3 +95,12 @@ MAILBOX_COMMAND_PARSE
   will see the parsed information collected from the command received over 
   uart 0 and sent over uart 1 returned.
 
+EXPT_SET_TIME:
+  FLAG: UNIT_TEST_EXPT_SET_TIME
+  DESCRIPTION: Write openlst "set_time" command over the experiment UART pins.
+  OBSERVABLE BEHAVIOR: We start with the time (represented as the time since
+  J2000) that corresponds to about May 27, 2021 at 9:30am. The loop increments
+  time (represented as two 32 bit integers) by 1 second and then writes the time
+  over the UART before delaying for 1 second. Since we increment by 1 second,
+  the nano-second bits in the command will never change. You'll see openlst
+  set_time commands coming across the EXPT UART every second.
