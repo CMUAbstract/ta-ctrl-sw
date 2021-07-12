@@ -9,7 +9,7 @@ export BOARD_MAJOR = 0
 export BOARD_MINOR = 0
 export DEVICE = msp430fr5994
 
-SHARED_DEPS = libmspuartlink:gcc libartibeus:gcc libads:gcc libio:gcc libfixed:gcc \
+SHARED_DEPS = libmspuartlink:gcc liblsm9ds1:gcc libartibeus:gcc libads:gcc libio:gcc libfixed:gcc \
 				 libmspware:gcc libmsp:gcc libgnss:gcc
 
 export MAIN_CLOCK_FREQ = 8000000
@@ -25,7 +25,7 @@ export LIBMSP_SLEEP_TIMER_CLK = ACLK
 export LIBMSP_SLEEP_TIMER_DIV = 8*1
 
 # Turn on/off existing processing in the Comm uart handler
-export LIBMSPUARTLINK_NO_PROCESS = 1
+export LIBMSPUARTLINK_NO_PROCESS = 0
 
 
 # COMM UART

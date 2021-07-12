@@ -21,7 +21,7 @@
 #include <libads/ads1115.h>
 #include <libmspuartlink/uartlink.h>
 #include <libgnss/gnss.h>
-
+#include <liblsm9ds1/imu.h>
 #include "gps.h"
 
 uint8_t msg[8] = {"ARTIBEUS"};
@@ -284,7 +284,11 @@ int main(void) {
     COMM_ENABLE; // Required for cntrl board v0 where we mixed up power rails
     expt_ack_check();
     __delay_cycles(4000000);
-    uartlink_open_tx(1);
+    expt_write_program();
+    __delay_cycles(4000000);
+    expt_write_jump();
+    while(1);
+    /*uartlink_open_tx(1);
     expt_write_jump();
     uartlink_close(1);
     uartlink_open_rx(1);
@@ -294,7 +298,7 @@ int main(void) {
       }
       // Try dis
       expt_write_program();
-    }
+    }*/
 #endif
 #ifdef TEST_MAILBOX_COMMAND_PARSE
 
@@ -376,6 +380,7 @@ int main(void) {
   uartlink_open(1);
   uint32_t time = 675379830;
   uint8_t decimal[4] = {0x30, 0x75, 0x00, 0x00};
+  uint8_t buff[16];
   while(1) {
     uint8_t new_time[8];
    // Start on
@@ -392,9 +397,49 @@ int main(void) {
     expt_set_time(new_time);
    // Increment time
    time++;
-   // Delay 1 second
+   // Read in from expt board
+    int count = 0;
+    //Read in first 3 bytes of command so as to retreive length of rest of command
+    while(!count) {
+      count = uartlink_receive_basic(1,buff,9);
+    }
+    if (count  > 3) {
+      if (buff[8] == ACK) {
+        // End program if we receive an ack in response to a set time
+        expt_ack_check();
+        while(1);
+      }
+    }
+    // Delay 1 second
     __delay_cycles(8000000);
   }
+#endif //Testing expt set time
+#ifdef TEST_IMU
+  // Test imu functionality
+  int temp = -1;
+  while(temp < 0) {
+    PRINTF("Temp is: %i\r\n",temp);
+    temp = init_lsm9ds1();
+  }
+
+  while(1) {
+    // Read from g,xl,m and print results
+    int16_t x,y,z;
+    read_g(&x,&y,&z);
+    PRINTF("Gyro: X: %i, Y: %i, Z: %i\r\n",x,y,z);
+    read_xl(&x,&y,&z);
+    PRINTF("Accel: X: %i, Y: %i, Z: %i\r\n",x,y,z);
+    read_m(&x,&y,&z);
+    PRINTF("Mag: X: %i, Y: %i, Z: %i\r\n",x,y,z);
+    // Delay 1 second
+    __delay_cycles(8000000);
+  }
+#endif // testing imu
+#ifdef TEST_WORMHOLE
+  EXP_ENABLE;
+  COMM_ENABLE; // Required for cntrl board v0 where we mixed up power rails
+  uartlink_open(1);
+  while(1);
 #endif
 }
 

@@ -3,7 +3,7 @@ OBJECTS = main.o \
 
 EXEC = dev
 
-DEPS = libmspuartlink:gcc libartibeus:gcc libads:gcc libio:gcc libfixed:gcc \
+DEPS = libmspuartlink:gcc liblsm9ds1:gcc libartibeus:gcc libads:gcc libio:gcc libfixed:gcc \
 				libmspware:gcc libmsp:gcc libgnss:gcc
 
 include tools/maker/Makefile
@@ -64,4 +64,10 @@ ifneq ($(UNIT_TEST_EXPT_SET_TIME),)
 override CFLAGS += -DTEST_EXPT_SET_TIME
 endif
 
+ifneq ($(UNIT_TEST_IMU),)
+override CFLAGS += -DTEST_IMU
+endif
 
+ifneq ($(UNIT_TEST_WORMHOLE),)
+override CFLAGS += -DTEST_WORMHOLE
+endif
