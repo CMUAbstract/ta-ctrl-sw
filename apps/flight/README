@@ -1,0 +1,18 @@
+This code operates under the assumption that the PocketQube is fully assembled;
+the code will hang at several different points if the required hardware is not
+present.
+
+On the first boot the MCU activates the burn wire switch to sink current out of
+the cap and through the nichrome burn wire in order to burn off fishing line
+that is holding the antenna in place
+
+This code is designed to withstand unpredictable power failures. So on every
+reboot, the code performs the following:
+* Initialize MCU and hardware
+* Clears temporary variables
+* Restores checkpoint and undo-log
+
+The main loop of the program is as follows:
+
+The interrupts on the uarts handle the following:
+

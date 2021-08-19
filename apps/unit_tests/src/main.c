@@ -259,11 +259,20 @@ int main(void) {
     char buffer[48];
     GNSS_ENABLE;
     uartlink_open(2);
+    /*while(1) {
+      printf("Running test!");
+      __delay_cycles(800000);
+      char arr[10] = "abcdefghij";
+      uartlink_send_basic(2,arr,10);
+      // Disable all excess sentences
+      //disable_sentences();
+    }*/
     P2OUT &= ~BIT3;
     P2DIR |= BIT3;
     __delay_cycles(800000);
     P2DIR &= ~BIT3;
-    for(int i = 0; i < 60; i++) {
+    disable_sentences();
+    for(int i = 0; i < 10; i++) {
       __delay_cycles(8000000);
       PRINTF("Waiting!\r\n");
     }
@@ -417,6 +426,7 @@ int main(void) {
 #ifdef TEST_IMU
   // Test imu functionality
   int temp = -1;
+  printf("here!\r\n");
   while(temp < 0) {
     PRINTF("Temp is: %i\r\n",temp);
     temp = init_lsm9ds1();
@@ -429,6 +439,7 @@ int main(void) {
     PRINTF("Gyro: X: %i, Y: %i, Z: %i\r\n",x,y,z);
     read_xl(&x,&y,&z);
     PRINTF("Accel: X: %i, Y: %i, Z: %i\r\n",x,y,z);
+    x = 0; y= 0; z = 0;
     read_m(&x,&y,&z);
     PRINTF("Mag: X: %i, Y: %i, Z: %i\r\n",x,y,z);
     // Delay 1 second
@@ -440,6 +451,11 @@ int main(void) {
   COMM_ENABLE; // Required for cntrl board v0 where we mixed up power rails
   uartlink_open(1);
   while(1);
+#endif
+#ifdef TEST_TELEM
+  while(1) {
+    update_telemetry();
+  }
 #endif
 }
 

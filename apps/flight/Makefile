@@ -1,11 +1,12 @@
 OBJECTS = main.o \
           adc.o \
           pkts.o \
-          gps.o
+          gps.o \
+          telem.o
 
-EXEC = dev
+EXEC = flight
 
 DEPS = libmspuartlink:gcc libartibeus:gcc libads:gcc libio:gcc libfixed:gcc \
-				libmspware:gcc libmsp:gcc libgnss:gcc
+				libmspware:gcc libmsp:gcc libgnss:gcc liblsm9ds1:gcc
 
 include tools/maker/Makefile

@@ -1,7 +1,9 @@
 OBJECTS = main.o \
-          gps.o
+          gps.o \
+          telem.o \
+          adc.o
 
-EXEC = dev
+EXEC = unit
 
 DEPS = libmspuartlink:gcc liblsm9ds1:gcc libartibeus:gcc libads:gcc libio:gcc libfixed:gcc \
 				libmspware:gcc libmsp:gcc libgnss:gcc
@@ -70,4 +72,8 @@ endif
 
 ifneq ($(UNIT_TEST_WORMHOLE),)
 override CFLAGS += -DTEST_WORMHOLE
+endif
+
+ifneq ($(UNIT_TEST_TELEM),)
+override CFLAGS += -DTEST_TELEM
 endif
