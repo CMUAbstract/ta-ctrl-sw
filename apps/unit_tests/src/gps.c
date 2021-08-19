@@ -45,6 +45,9 @@ void scrape_gps_buffer() {
     int pkt_error = 1;
     data = gps_uart_payload[i];
     LOG("got: %c, cout: %i \r\n",data,gnss_pkt_counter - 5);
+    if (pkt_type != IN_PROGRESS && pkt_type != GPGGA) {
+      printf("Error! no disabling-- %u\r\n",pkt_type);
+    }
     if (data == '$') {
       gnss_pkt_counter = 0;
       pkt_type = IN_PROGRESS;
@@ -131,5 +134,22 @@ int time_compare(gps_data *newer, gps_data *older) {
     }
   }
   // Again, we're not checking after the "."
+  return 0;
+}
+
+// Function to turn off excess nmea sentences
+int disable_sentences() {
+  // Write all sentences over to gnss
+  uartlink_send_basic(2,disable01,DISABLE_MSG_LEN);
+  __delay_cycles(80000);
+  uartlink_send_basic(2,disable02,DISABLE_MSG_LEN);
+  __delay_cycles(80000);
+  uartlink_send_basic(2,disable03,DISABLE_MSG_LEN);
+  __delay_cycles(80000);
+  uartlink_send_basic(2,disable04,DISABLE_MSG_LEN);
+  __delay_cycles(80000);
+  uartlink_send_basic(2,disable05,DISABLE_MSG_LEN);
+  __delay_cycles(80000);
+  //uartlink_close(2);
   return 0;
 }
