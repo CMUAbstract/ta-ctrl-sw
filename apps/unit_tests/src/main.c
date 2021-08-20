@@ -34,10 +34,17 @@ uint8_t adc_vals[4];
 
 __nv uint16_t first_prog = MAGIC_NUMBER;
 
+#ifndef BIT_FLIP
+#define BIT_FLIP(port,bit) \
+	P##port##OUT |= BIT##bit; \
+	P##port##DIR |= BIT##bit; \
+	P##port##OUT &= ~BIT##bit;
+#endif
+
 int main(void) {
   artibeus_init();
   // Enable Everything
-
+  __delay_cycles(8000000);
   GPIO(LIBARTIBEUS_PORT_EXP_EN, DIR) |= BIT(LIBARTIBEUS_PIN_EXP_EN);
   GPIO(LIBARTIBEUS_PORT_EXP_EN, OUT) |= BIT(LIBARTIBEUS_PIN_EXP_EN);
 
@@ -46,8 +53,6 @@ int main(void) {
 
   GPIO(LIBARTIBEUS_PORT_GNSS_EN, DIR) |= BIT(LIBARTIBEUS_PIN_GNSS_EN);
   GPIO(LIBARTIBEUS_PORT_GNSS_EN, OUT) |= BIT(LIBARTIBEUS_PIN_GNSS_EN);
-
-  uartlink_open(1); // Note, uartlinks 0 and 2  get opened in artibeus init
 
   int count = 0;
   msg[0] = 'E';
@@ -449,8 +454,11 @@ int main(void) {
 #ifdef TEST_WORMHOLE
   EXP_ENABLE;
   COMM_ENABLE; // Required for cntrl board v0 where we mixed up power rails
-  uartlink_open(1);
-  while(1);
+  while(1) {
+    process_uart1(); // Expt board
+    process_uart0(); // Comm board
+    __delay_cycles(80000);
+  }
 #endif
 #ifdef TEST_TELEM
   while(1) {
@@ -459,6 +467,7 @@ int main(void) {
     process_uart0(); // Comm board
   }
 #endif
+
 }
 
 

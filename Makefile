@@ -2,7 +2,7 @@ TOOLS_REL_ROOT = tools
 TOOLS =
 TOOLCHAINS = gcc
 
-APPS = unit_tests dev
+APPS = unit_tests dev flight
 
 export BOARD = artibeus
 export BOARD_MAJOR = 0
@@ -55,7 +55,8 @@ export LIBMSPUARTLINK2_CLK = SMCLK
 # (Just binary checks for enabling different peripherals)
 export LIBARTIBEUS_RUN_UARTLINKS = 1
 export LIBARTIBEUS_RUN_I2C = 1
-export LIBARTIBEUS_HWID = 0x7461
+export LIBARTIBEUS_COMM_HWID = 0x7461
+export LIBARTIBEUS_CTRL_HWID = 0x0005
 export LIBARTIBEUS_CONFIG_WATCHDOG = 1
 export LIBARTIBEUS_WATCHDOG_CLK = ACLK
 export LIBARTIBEUS_WATCHDOG_INTERVAL = 8192K # 4 minutes
@@ -66,7 +67,7 @@ export VOLTAGE = 2400
 CONSOLE ?=
 
 ifneq ($(CONSOLE),)
-export VERBOSE = 2
+export VERBOSE = $(CONSOLE)
 export LIBMSP_SLEEP = 1
 export LIBIO_BACKEND = hwuart
 #TODO right now we can only use uartlink0 if we're also linking in the uartlink

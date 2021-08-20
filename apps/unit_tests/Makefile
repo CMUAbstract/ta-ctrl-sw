@@ -1,7 +1,7 @@
 OBJECTS = main.o \
           gps.o \
-          telem.o \
           adc.o
+          #telem.o \
 
 EXEC = unit
 
