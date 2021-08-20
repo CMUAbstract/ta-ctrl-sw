@@ -455,6 +455,8 @@ int main(void) {
 #ifdef TEST_TELEM
   while(1) {
     update_telemetry();
+    process_uart1(); // Expt board
+    process_uart0(); // Comm board
   }
 #endif
 }

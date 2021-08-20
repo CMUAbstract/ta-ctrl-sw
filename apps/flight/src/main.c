@@ -18,6 +18,7 @@
 
 #include <libartibeus/artibeus.h>
 #include <libartibeus/comm.h>
+#include <libartibeus/handle_uarts.h>
 #include <libads/ads1115.h>
 #include <libmspuartlink/uartlink.h>
 #include <libgnss/gnss.h>
@@ -63,8 +64,6 @@ int main(void) {
   fix_recorded = 0;
   no_fix_counter = 0;
   // Clear transfer variables
-  comm_expt_link.transfer_len = 0;
-  comm_expt_link.status = TRANSFER_DONE;
   // Restore any corrupted data
   restore_from_backup(cur_ctx);
   // Scheduler loop!
@@ -81,12 +80,12 @@ int main(void) {
         break;
       }
       case(GET_UART1):{
-
+        process_uart1();
         next_task = GET_UART2;
         break;
       }
       case(GET_UART2):{
-
+        process_uart0();
         next_task = RECORD_TELEM;
         break;
       }
