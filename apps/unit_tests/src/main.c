@@ -18,6 +18,7 @@
 
 #include <libartibeus/artibeus.h>
 #include <libartibeus/comm.h>
+#include <libartibeus/query.h>
 #include <libads/ads1115.h>
 #include <libmspuartlink/uartlink.h>
 #include <libgnss/gnss.h>
@@ -261,33 +262,77 @@ int main(void) {
 #endif
 #ifdef TEST_GNSS
     // GNSS check
-    char buffer[48];
     GNSS_ENABLE;
     uartlink_open(2);
-    /*while(1) {
-      printf("Running test!");
-      __delay_cycles(800000);
-      char arr[10] = "abcdefghij";
-      uartlink_send_basic(2,arr,10);
-      // Disable all excess sentences
-      //disable_sentences();
-    }*/
-    P2OUT &= ~BIT3;
-    P2DIR |= BIT3;
-    __delay_cycles(800000);
-    P2DIR &= ~BIT3;
+    __delay_cycles(80000);
     disable_sentences();
-    for(int i = 0; i < 10; i++) {
+    //for(int i = 0; i < 30; i++) {
+    for(int i = 0; i < 3; i++) {
       __delay_cycles(8000000);
-      PRINTF("Waiting!\r\n");
+      PRINTF("Waiting! %u\r\n",pkt_type);
     }
     while(1) {
-      LOG("Scraping new buffer\r\n");
-      scrape_gps_buffer();
-      gps_update(buffer);
-      PRINTF("\r\n-->");
-      for(int i = 0; i < 48; i++) {
-        PRINTF("%c",buffer[i]);
+      do {
+        __delay_cycles(8000000); 
+        PRINTF("Waiting! %u\r\n",pkt_type);
+      } while (!(cur_gps_data->complete));
+      if (cur_gps_data->fix[0] == FIX_OK) {
+        uint8_t gps_dec_buf[ARTIBEUS_GPS_SIZE];
+        uint8_t time_dec_buf[ARTIBEUS_TIME_SIZE];
+        uint8_t date_dec_buf[ARTIBEUS_DATE_SIZE];
+        for (int i = 0; i < 10; i++) {
+          PRINTF("%c ",cur_gps_data->lat[i]);
+        }
+        for (int i = 0; i < 11; i++) {
+          PRINTF("%c ",cur_gps_data->longi[i]);
+        }
+        PRINTF("\r\n");
+        gps_dec_buf[0] = (DEGS_LAT(cur_gps_data->lat)) & 0xff;
+        gps_dec_buf[1] = MIN_LAT(cur_gps_data->lat) & (0xff << 8);//TODO:remove!
+        gps_dec_buf[2] = MIN_LAT(cur_gps_data->lat) & (0xff);
+        gps_dec_buf[3] = (uint8_t)((SECS_LAT(cur_gps_data->lat) & (0xff << 8)) >> 8);
+        gps_dec_buf[4] = SECS_LAT(cur_gps_data->lat) & (0xff);
+        gps_dec_buf[5] = (uint8_t)((DEGS_LONG(cur_gps_data->longi) &
+                                              (0xff << 8)) >> 8);
+        gps_dec_buf[6] = DEGS_LONG(cur_gps_data->longi) & (0xff);
+        gps_dec_buf[7] = (uint8_t)((MIN_LONG(cur_gps_data->longi) &
+                                              (0xff << 8)) >> 8);
+        gps_dec_buf[8] = MIN_LONG(cur_gps_data->longi) & (0xff);
+        gps_dec_buf[9] = (uint8_t)((SECS_LONG(cur_gps_data->longi) &
+                                              (0xff << 8)) >> 8);
+        gps_dec_buf[10] = SECS_LONG(cur_gps_data->longi) & (0xff);
+        gps_dec_buf[11] = (NS(cur_gps_data->lat) << 1 ) | EW(cur_gps_data->longi);
+
+        time_dec_buf[0] = UTC_HRS(cur_gps_data->time);
+        time_dec_buf[1] = UTC_MMS(cur_gps_data->time);
+        time_dec_buf[2] = UTC_SECS(cur_gps_data->time);
+
+        date_dec_buf[0] = DATE_MM(cur_gps_data->date);
+        date_dec_buf[1] = DATE_DD(cur_gps_data->date);
+        date_dec_buf[2] = DATE_YY(cur_gps_data->date);
+        // Update GPS location and time
+        artibeus_set_gps(gps_dec_buf);
+        artibeus_set_time(time_dec_buf);
+        artibeus_set_date(date_dec_buf);
+        uint8_t *gps = artibeus_get_gps();
+        for (int i = 0; i < ARTIBEUS_GPS_SIZE; i++) {
+          PRINTF("%u ",gps[i]);
+        }
+        PRINTF("\r\n");
+        uint8_t *date = artibeus_get_date();
+        for (int i = 0; i < ARTIBEUS_DATE_SIZE; i++) {
+          PRINTF("%u ",date[i]);
+        }
+        PRINTF("\r\n");
+        uint8_t *time = artibeus_get_time();
+        for (int i = 0; i < ARTIBEUS_TIME_SIZE; i++) {
+          PRINTF("%u ",time[i]);
+        }
+        PRINTF("\r\n");
+      }
+      else {
+        PRINTF("Need fix! %i\r\n",cur_gps_data->fix[0]);
+        continue;
       }
       __delay_cycles(8000000);
     }
@@ -457,7 +502,7 @@ int main(void) {
   while(1) {
     process_uart1(); // Expt board
     process_uart0(); // Comm board
-    __delay_cycles(80000);
+    //__delay_cycles(80000);
   }
 #endif
 #ifdef TEST_TELEM

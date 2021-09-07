@@ -19,7 +19,11 @@
 #include <libartibeus/artibeus.h>
 #include <libgnss/gnss.h>
 
-__nv uint8_t gps_uart_payload[512];
+int time_compare(gps_data *newer, gps_data *older);
+
+
+#if 0
+__nv uint8_t gps_uart_payload[168];
 
 //TODO figure out if we're handling this correctly for power failure
 __nv gps_data gps_data1 = { {0}, {0}, {0}, 0, 0};
@@ -28,18 +32,21 @@ __nv gps_data *cur_gps_data = &gps_data1;
 int fix_recorded = 0;
 int no_fix_counter = 0;
 
-
-int time_compare(gps_data *newer, gps_data *older);
-
 // Write after read on cur_gps_data
 int scrape_gps_buffer() {
   //TODO make this more efficient
   unsigned buff_count;
   int need_fix = -1;
   // Since all uart data is volatile, we don't need to worry about WARs in this
-  buff_count = uartlink_receive_basic(2,gps_uart_payload,511);
+  buff_count = uartlink_receive_basic(2,gps_uart_payload,168);
+  if(buff_count > 0) {
+    PRINTF("Len is: %u\r\n",buff_count);
+    for (int i =0; i < buff_count; i++) {
+      PRINTF("%c",gps_uart_payload[i]);
+    }
+  }
   if (buff_count < FULL_SENTENCE_LEN) {
-    LOG("Too short! got %i\r\n", buff_count);
+    //PRINTF("Too short! got %i\r\n", buff_count);
     return need_fix;
   }
   // Zip through  uart buffer
@@ -49,9 +56,6 @@ int scrape_gps_buffer() {
     int pkt_error = 1;
     data = gps_uart_payload[i];
     LOG("got: %c, cout: %i \r\n",data,gnss_pkt_counter - 5);
-    if (pkt_type != IN_PROGRESS && pkt_type != GPGGA) {
-      printf("Error! no disabling-- %u\r\n",pkt_type);
-    }
     if (data == '$') {
       gnss_pkt_counter = 0;
       pkt_type = IN_PROGRESS;
@@ -67,6 +71,7 @@ int scrape_gps_buffer() {
     }
     else if (active_pkt) {
       LOG("Active pkt!\r\n");
+      // Builds up packet
       pkt_done = get_sentence_pkt(data);
       if (!pkt_done) {
         continue;
@@ -77,8 +82,8 @@ int scrape_gps_buffer() {
       continue;
     }
     gps_data *next_gps_data;
+    // Just a single pointer swap
     if (pkt_done) {
-      LOG("Swapping!\r\n");
       active_pkt = 0;
       gnss_pkt_counter = 0;
       next_gps_data = (cur_gps_data == &gps_data1) ?
@@ -128,9 +133,24 @@ int gps_update(uint8_t *cur_pkt_ptr) {
 // Returns 0 if newer time == older time
 // Returns -1 if newer time < older time
 int time_compare(gps_data *newer, gps_data *older) {
+  // Check date
+  for(int i = 0; i < 6; i++) {
+    if (newer->date[i] > older->date[i]) {
+      return 1;
+    }
+    if (newer->date[i] < older->date[i]) {
+      return -1;
+    }
+  }
   // All times are %6.6f format, but we're only checking whole seconds at the
   // moment
   for(int i = 0; i < 6; i++) {
+    if (newer->date[i] > older->date[i]) {
+      return 1;
+    }
+    if (newer->date[i] < older->date[i]) {
+      return -1;
+    }
     if (newer->time[i] > older->time[i]) {
       return 1;
     }
@@ -141,20 +161,20 @@ int time_compare(gps_data *newer, gps_data *older) {
   // Again, we're not checking after the "."
   return 0;
 }
+#endif
+
+//const char newDisable[16] = {0xA0,0xA1,0x00,0x09,0x08,0x01,0x01,
+//                            0x00,0x01,0x00,0x00,0x00,0x00,0x09,0x0D,0x0A};
+const char newDisable[16] = {0xA0,0xA1,0x00,0x09,0x08,0x00,0x00,
+                            0x00,0x00,0x01,0x00,0x00,0x00,0x09,0x0D,0x0A};
 
 // Function to turn off excess nmea sentences
 int disable_sentences() {
   // Write all sentences over to gnss
-  uartlink_send_basic(2,disable01,DISABLE_MSG_LEN);
+  uartlink_send_basic(2,newDisable,16);
   __delay_cycles(80000);
-  uartlink_send_basic(2,disable02,DISABLE_MSG_LEN);
+  // One more time for good measure
+  uartlink_send_basic(2,newDisable,16);
   __delay_cycles(80000);
-  uartlink_send_basic(2,disable03,DISABLE_MSG_LEN);
-  __delay_cycles(80000);
-  uartlink_send_basic(2,disable04,DISABLE_MSG_LEN);
-  __delay_cycles(80000);
-  uartlink_send_basic(2,disable05,DISABLE_MSG_LEN);
-  __delay_cycles(80000);
-  //uartlink_close(2);
   return 0;
 }

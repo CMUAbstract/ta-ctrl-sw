@@ -1,2 +1,4 @@
 apps/*/bld
 *.swp
+*.out
+screen*
