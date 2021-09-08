@@ -307,8 +307,8 @@ int main(void) {
         time_dec_buf[1] = UTC_MMS(cur_gps_data->time);
         time_dec_buf[2] = UTC_SECS(cur_gps_data->time);
 
-        date_dec_buf[0] = DATE_MM(cur_gps_data->date);
-        date_dec_buf[1] = DATE_DD(cur_gps_data->date);
+        date_dec_buf[0] = DATE_DD(cur_gps_data->date);
+        date_dec_buf[1] = DATE_MM(cur_gps_data->date);
         date_dec_buf[2] = DATE_YY(cur_gps_data->date);
         // Update GPS location and time
         artibeus_set_gps(gps_dec_buf);
@@ -329,6 +329,33 @@ int main(void) {
           PRINTF("%u ",time[i]);
         }
         PRINTF("\r\n");
+      int32_t year = (int32_t)date_dec_buf[2] + 2000;
+      int32_t month = (int32_t)date_dec_buf[1];
+      int32_t day = (int32_t)date_dec_buf[0];
+
+      int32_t hour = (int32_t)time_dec_buf[0];
+      int32_t minute = (int32_t)time_dec_buf[1];
+      int32_t second = (int32_t)time_dec_buf[2];
+      PRINTF("TestY:%i %i %i\r\n",(uint8_t)(day & 0xff),(uint8_t)
+      (month&0xff),(uint16_t)(year &0xffff));
+      PRINTF("Test:%i %i %i\r\n",(uint8_t)(hour & 0xff),(uint8_t)
+      (minute&0xff),(uint8_t)(second &0xff));
+      int32_t jd =
+       day-32075+1461*(year+4800+(month-14)/12)/4
+       +367*(month-2-(month-14)/12*12)/12-3
+       *((year+4900+(month-14)/12)/100)/4;
+      int32_t sec =
+       86400*(jd-2451545)+60*(60*hour+minute)+second-43135-1;
+      PRINTF("Secs:\r\n");
+      uint8_t temp_arr[8] = {0};
+      memcpy(temp_arr,&sec,4);
+      for(int i = 0; i < 8; i++) {
+        //uint16_t temp;
+        //temp =((sec & (0xffff << (16*i))) >> (16*i));
+        PRINTF("%x ",temp_arr[i]);
+      }
+      PRINTF("\r\n");
+      PRINTF("All: %x\r\n",sec);
       }
       else {
         PRINTF("Need fix! %i\r\n",cur_gps_data->fix[0]);

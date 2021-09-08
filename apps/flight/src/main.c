@@ -60,6 +60,25 @@ int main(void) {
     artibeus_init();
   }
   int count;
+  //TODO make this more strategic in the future
+  app_gps_init();
+  uint8_t* time_date[ARTIBEUS_TIME_DATE_SIZE];
+  __delay_cycles(8000000); 
+  __delay_cycles(8000000); //Try to update the time
+  app_gps_gather();
+  uint8_t* time = artibeus_get_time();
+  uint8_t* date = artibeus_get_date();
+  memcpy(time_date,time,3);
+  memcpy(time_date + 3,date,3);
+  GNSS_DISABLE;
+  EXP_ENABLE;
+  uint8_t temp_ack_count = expt_ack_count;
+  for (int i = 0; i < 10; i++) {
+    __delay_cycles(8000);
+    if (expt_ack_count > temp_ack_count) { break; }
+    expt_set_time_utc(time_date);
+  }
+  COMM_ENABLE;
   // Clear transfer variables
   // Restore any corrupted data
   restore_from_backup(cur_ctx);

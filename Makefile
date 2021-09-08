@@ -64,7 +64,7 @@ export LIBARTIBEUS_WATCHDOG_INTERVAL = 8192K # 4 minutes
 
 export VOLTAGE = 2400
 
-CONSOLE ?=
+CONSOLE ?= 1
 
 ifneq ($(CONSOLE),)
 export VERBOSE = $(CONSOLE)
