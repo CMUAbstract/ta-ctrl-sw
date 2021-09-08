@@ -19,11 +19,11 @@
 #include <libartibeus/artibeus.h>
 #include <libgnss/gnss.h>
 
-__nv uint8_t gps_uart_payload[512];
+__nv uint8_t gps_uart_payload[74];
 
 //TODO figure out if we're handling this correctly for power failure
-__nv gps_data gps_data1 = { {0}, {0}, {0}, 0, 0};
-__nv gps_data gps_data2 = { {0}, {0}, {0}, 0, 0};
+__nv gps_data gps_data1 = { {0},{0}, {0}, {0}, {0}, 0};
+__nv gps_data gps_data2 = { {0},{0}, {0}, {0}, {0}, 0};
 __nv gps_data *cur_gps_data = &gps_data1;
 
 int fix_recorded = 0;
@@ -39,7 +39,7 @@ int scrape_gps_buffer() {
   unsigned buff_count;
   int need_fix = -1;
   // Since all uart data is volatile, we don't need to worry about WARs in this
-  buff_count = uartlink_receive_basic(2,gps_uart_payload,511);
+  buff_count = uartlink_receive_basic(2,gps_uart_payload,74);
   if (buff_count < FULL_SENTENCE_LEN) {
     LOG("buff count only %i\r\n",buff_count);
     return need_fix;
@@ -50,6 +50,7 @@ int scrape_gps_buffer() {
     int pkt_done = 0;
     int pkt_error = 1;
     data = gps_uart_payload[i];
+    PRINTF("%c",data);
     LOG("got: %c, cout: %i \r\n",data,gnss_pkt_counter - 5);
     if (data == '$') {
       gnss_pkt_counter = 0;
@@ -82,6 +83,10 @@ int scrape_gps_buffer() {
       gnss_pkt_counter = 0;
       next_gps_data = (cur_gps_data == &gps_data1) ?
         &gps_data2 : &gps_data1;
+      // Copy date
+      for(int i = 0; i < 6; i++) {
+        next_gps_data->date = cur_gps_data->date[i];
+      }
       pkt_error = process_sentence_pkt(cur_gnss_ptr, next_gps_data);
     }
     // Check for pkt errors and fix
@@ -130,6 +135,7 @@ int gps_update(uint8_t *cur_pkt_ptr) {
 int time_compare(gps_data *newer, gps_data *older) {
   // All times are %6.6f format, but we're only checking whole seconds at the
   // moment
+  //TODO handle roll over on date
   for(int i = 0; i < 6; i++) {
     if (newer->time[i] > older->time[i]) {
       return 1;

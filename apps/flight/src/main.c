@@ -38,6 +38,7 @@ __nv uint8_t solar_check = 0;
 
 __nv uint16_t first_prog = MAGIC_NUMBER;
 
+
 __nv artibeus_ctx ctx0 = { ADC, -1 };
 __nv artibeus_ctx ctx1 = { ADC, -1 };
 __nv artibeus_ctx *cur_ctx = &ctx0;
@@ -46,7 +47,6 @@ __nv artibeus_ctx *cur_ctx = &ctx0;
 static __nv uint8_t backup_data[BACKUP_DATA_LEN]; // Buffer where we'll put data
 // Data structure for each double buffered entry
 static __nv dbl_buffer_entry double_buffer[DBL_BUFF_LEN];
-
 
 
 int main(void) {
@@ -60,16 +60,11 @@ int main(void) {
     artibeus_init();
   }
   int count;
-  // Clear GPS variables
-  fix_recorded = 0;
-  no_fix_counter = 0;
   // Clear transfer variables
   // Restore any corrupted data
   restore_from_backup(cur_ctx);
   // Scheduler loop!
   while(1) {
-    locations last_location;
-    uint16_t Vcap;
     artibeus_mode next_task;
     // Pet watchdog
     msp_watchdog_kick();
@@ -81,10 +76,10 @@ int main(void) {
       }
       case(GET_UART1):{
         process_uart1();
-        next_task = GET_UART2;
+        next_task = GET_UART0;
         break;
       }
-      case(GET_UART2):{
+      case(GET_UART0):{
         process_uart0();
         next_task = RECORD_TELEM;
         break;

@@ -17,128 +17,62 @@
 #include <libmspuartlink/uartlink.h>
 
 #include <libartibeus/artibeus.h>
+#include <libartibeus/query.h>
 #include <libgnss/gnss.h>
 
-__nv uint8_t gps_uart_payload[512];
 
-//TODO figure out if we're handling this correctly for power failure
-__nv gps_data gps_data1 = { {0}, {0}, {0}, 0, 0};
-__nv gps_data gps_data2 = { {0}, {0}, {0}, 0, 0};
-__nv gps_data *cur_gps_data = &gps_data1;
+static char newDisable[16] = {0xA0,0xA1,0x00,0x09,0x08,0x00,0x00,
+                     0x00,0x00,0x01,0x00,0x00,0x00,0x09,0x0D,0x0A};
+__nv uint8_t gps_start_count = 0;
 
-int fix_recorded = 0;
-int no_fix_counter = 0;
-
-int time_compare(gps_data *newer, gps_data *older);
-
-// Write after read on cur_gps_data
-// Return 0 if we have a fix, -1 if we don't
-// Ultimately returns the newest gps packet with a fix
-int scrape_gps_buffer() {
-  //TODO make this more efficient
-  unsigned buff_count;
-  int need_fix = -1;
-  // Since all uart data is volatile, we don't need to worry about WARs in this
-  buff_count = uartlink_receive_basic(2,gps_uart_payload,511);
-  if (buff_count < FULL_SENTENCE_LEN) {
-    LOG("buff count only %i\r\n",buff_count);
-    return need_fix;
-  }
-  // Zip through uart buffer
-  for(int i = 0; i < buff_count; i++) {
-    char data;
-    int pkt_done = 0;
-    int pkt_error = 1;
-    data = gps_uart_payload[i];
-    LOG("got: %c, cout: %i \r\n",data,gnss_pkt_counter - 5);
-    if (data == '$') {
-      gnss_pkt_counter = 0;
-      pkt_type = IN_PROGRESS;
-      active_pkt = 0;
-      LOG("Starting!\r\n");
-      continue;
-    }
-    else if (pkt_type == IN_PROGRESS) {
-      // Try to find packet header
-      LOG("finding type\r\n");
-      get_sentence_type(data);
-      continue;
-    }
-    else if (active_pkt) {
-      LOG("Active pkt!\r\n");
-      pkt_done = get_sentence_pkt(data);
-      if (!pkt_done) {
-        continue;
-      }
-    }
-    else {
-      LOG("Searching...\r\n");
-      continue;
-    }
-    gps_data *next_gps_data;
-    if (pkt_done) {
-      LOG("Swapping!\r\n");
-      active_pkt = 0;
-      gnss_pkt_counter = 0;
-      next_gps_data = (cur_gps_data == &gps_data1) ?
-        &gps_data2 : &gps_data1;
-      pkt_error = process_sentence_pkt(cur_gnss_ptr, next_gps_data);
-    }
-    // Check for pkt errors and fix
-    if (!pkt_error && next_gps_data->fix[0] == FIX_OK) {
-      //Update latest gps coordinates if time is newer
-      need_fix = 0;
-      if (time_compare(next_gps_data, cur_gps_data) > 0) {
-        cur_gps_data = next_gps_data;
-      }
-      else {
-        LOG("no swap-- no time\r\n");
-      }
-    }
-    else {
-      LOG("Pkt error!\r\n");
-    }
-  }
-  return need_fix;
+void app_gps_init() {
+  GNSS_ENABLE;
+  uartlink_open(2);
+  // Write all sentences over to gnss
+  uartlink_send_basic(2,newDisable,16);
+  __delay_cycles(80000);
+  // One more time for good measure
+  uartlink_send_basic(2,newDisable,16);
+  __delay_cycles(80000);
+  return;
 }
 
-int gps_update(uint8_t *cur_pkt_ptr) {
-  //Put data in buffer
-  gps_data *data_out;
-  if (cur_gps_data->complete) {
-    data_out = cur_gps_data;
+// Returns 1 if cur_gps is complete and we have a fix
+int app_gps_gather() {
+  if (cur_gps_data->complete && cur_gps_data->fix[0] == FIX_OK) {
+    uint8_t gps_dec_buf[ARTIBEUS_GPS_SIZE];
+    uint8_t time_dec_buf[ARTIBEUS_TIME_SIZE];
+    uint8_t date_dec_buf[ARTIBEUS_DATE_SIZE];
+
+    gps_dec_buf[0] = (DEGS_LAT(cur_gps_data->lat)) & 0xff;
+    gps_dec_buf[1] = MIN_LAT(cur_gps_data->lat) & (0xff << 8);//TODO:remove!
+    gps_dec_buf[2] = MIN_LAT(cur_gps_data->lat) & (0xff);
+    gps_dec_buf[3] = (uint8_t)((SECS_LAT(cur_gps_data->lat) & (0xff << 8)) >> 8);
+    gps_dec_buf[4] = SECS_LAT(cur_gps_data->lat) & (0xff);
+    gps_dec_buf[5] = (uint8_t)((DEGS_LONG(cur_gps_data->longi) &
+                                          (0xff << 8)) >> 8);
+    gps_dec_buf[6] = DEGS_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[7] = (uint8_t)((MIN_LONG(cur_gps_data->longi) &
+                                          (0xff << 8)) >> 8);
+    gps_dec_buf[8] = MIN_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[9] = (uint8_t)((SECS_LONG(cur_gps_data->longi) &
+                                          (0xff << 8)) >> 8);
+    gps_dec_buf[10] = SECS_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[11] = (NS(cur_gps_data->lat) << 1 ) | EW(cur_gps_data->longi);
+
+    time_dec_buf[0] = UTC_HRS(cur_gps_data->time);
+    time_dec_buf[1] = UTC_MMS(cur_gps_data->time);
+    time_dec_buf[2] = UTC_SECS(cur_gps_data->time);
+
+    date_dec_buf[0] = DATE_MM(cur_gps_data->date);
+    date_dec_buf[1] = DATE_DD(cur_gps_data->date);
+    date_dec_buf[2] = DATE_YY(cur_gps_data->date);
+
+    // Update GPS location and time
+    artibeus_set_gps(gps_dec_buf);
+    artibeus_set_time(time_dec_buf);
+    artibeus_set_date(date_dec_buf);
+    return 1;
   }
-  else {
-    data_out = (cur_gps_data == &gps_data1) ? &gps_data2 : &gps_data1;
-  }
-  for(int i = 0; i < 13; i++) {
-    *cur_pkt_ptr++ = data_out->time[i];
-  }
-  for(int i = 0; i < 10; i++) {
-    *cur_pkt_ptr++ = data_out->lat[i];
-  }
-  for(int i = 0; i < 11; i++) {
-    *cur_pkt_ptr++ = data_out->longi[i];
-  }
-  *cur_pkt_ptr++ = data_out->fix[0];
   return 0;
 }
-
-// Returns 1 if  if  newer time > older time
-// Returns 0 if newer time == older time
-// Returns -1 if newer time < older time
-int time_compare(gps_data *newer, gps_data *older) {
-  // All times are %6.6f format, but we're only checking whole seconds at the
-  // moment
-  for(int i = 0; i < 6; i++) {
-    if (newer->time[i] > older->time[i]) {
-      return 1;
-    }
-    if (older->time[i] > newer->time[i]) {
-      return -1;
-    }
-  }
-  // Again, we're not checking after the "."
-  return 0;
-}
-

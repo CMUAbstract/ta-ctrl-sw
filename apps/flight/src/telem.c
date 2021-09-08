@@ -25,6 +25,12 @@
 #include <liblsm9ds1/imu.h>
 #include "gps.h"
 #include "adc.h"
+#include "telem.h"
+
+__nv artibeus_telem_t telem_buffer[TELEM_BUFF_SIZE]; 
+__nv uint8_t telem_buffer_head = 0;
+__nv uint8_t telem_buffer_tail = 0;
+__nv uint8_t telem_buffer_full = 0;
 
 // leave in volatile memory
 uint16_t gps_timer_triggered = 0;
@@ -33,70 +39,6 @@ int need_fix = -1;
 // Self contained telemetry function that gathers data, updates the most recent
 // query-able data elements, and updates the packets that will get transmitted.
 int update_telemetry() {
-  // Check GPS timer and set up if necessary
-  uint16_t gps_timer_set = TA0CCTL0 | CCIE;
-  if (gps_timer_triggered || !gps_timer_set) {
-    if (!gps_timer_set) {
-      TA0CCR0 = 40000; //~Around 10min
-      TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE_1;
-      TA0CCTL0 |= CCIE;
-      TA0R = 0;
-    }
-    // Collect GPS data if it's time
-    //TODO pack this into a nice function
-    do {
-      uint16_t Vcap = get_vcap();
-      if (!fix_recorded &&  Vcap < 2800) { break;}
-      if (fix_recorded && Vcap < 1900) { break;}
-      GNSS_ENABLE;
-      uint8_t gps_loc[48];
-      for(int i = 0; i < 90; i++) {
-        // Wait one sec
-        __delay_cycles(8000000);
-        need_fix = scrape_gps_buffer();
-        if (!need_fix) {
-          fix_recorded = 1;
-          no_fix_counter = 0;
-          break;
-        }
-        // Increment no_fix count if we were supposed to have a fix but lost it
-        if (i == 10 && fix_recorded) {
-          no_fix_counter += 1;
-        }
-      }
-      if (!need_fix) {
-        gps_update(gps_loc);
-        //last_location = good_location(gps_loc);
-      }
-      else {
-        //last_location = NOWHERE;
-        // Reset GPS if:
-        // we still don't have a fix after 60s
-        // or we tried 3 times to get a fix and still don't have it.
-        if (!fix_recorded || (no_fix_counter > 3)) {
-          RESET_GNSS;
-        }
-      }
-      GNSS_DISABLE; //TODO do we really want this?
-      uint8_t gps_dec_buf[ARTIBEUS_GPS_SIZE];
-      uint8_t time_dec_buf[ARTIBEUS_TIME_SIZE];
-      //TODO check this casting
-      gps_dec_buf[0] = DEGS_LAT(cur_gps_data->lat);
-      gps_dec_buf[2] = MIN_LAT(cur_gps_data->lat);
-      gps_dec_buf[4] = SECS_LAT(cur_gps_data->lat);
-      gps_dec_buf[6] = DEGS_LONG(cur_gps_data->longi);
-      gps_dec_buf[8] = MIN_LONG(cur_gps_data->longi);
-      gps_dec_buf[10] = SECS_LONG(cur_gps_data->longi);
-      gps_dec_buf[11] = (NS(cur_gps_data->lat) << 1 ) & EW(cur_gps_data->longi);
-      time_dec_buf[0] = UTC_HRS(cur_gps_data->time);
-      time_dec_buf[1] = UTC_MMS(cur_gps_data->time);
-      time_dec_buf[2] = UTC_SECS(cur_gps_data->time);
-      // Update GPS location and time
-      artibeus_set_gps(gps_dec_buf);
-      artibeus_set_time(time_dec_buf);
-      gps_timer_triggered = 0;
-    } while(0);
-  }
   // Grab data from IMU
   int temp = -1;
   while(temp < 0) { temp = init_lsm9ds1(); }
@@ -118,6 +60,44 @@ int update_telemetry() {
   }
   // Update most recent power data & averaged data structures
   artibeus_set_pwr(temp_buf);
+  // Check GPS timer and set up if necessary
+  uint16_t gps_timer_set = TA0CCTL0 | CCIE;
+  if (!gps_timer_set && gps_start_count > GPS_FAIL_MAX) {
+    GNSS_DISABLE;
+    TA0CCR0 = 40000; //More like 10min
+    TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE_1;
+    TA0CCTL0 |= CCIE;
+    TA0R = 0;
+    gps_start_count = 0;
+  }
+  else if (gps_timer_triggered || !gps_timer_set) {
+    gps_start_count++;
+    app_gps_init();
+    if (!gps_timer_set) {
+      //TA0CCR0 = 40000; //~Around 10min
+      TA0CCR0 = 4000; //More like 1min
+      TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE_1;
+      TA0CCTL0 |= CCIE;
+      TA0R = 0;
+    }
+    int good_gps = app_gps_gather();
+    if (good_gps) {
+      gps_start_count = 0;
+      // Pack up and stuff data into ring buffer
+      uint8_t temp_cnt = telem_buffer_tail;
+      artibeus_set_telem_pkt(telem_buffer + temp_cnt);
+      temp_cnt++;
+      if (temp_cnt >= TELEM_BUFF_SIZE) {
+        temp_cnt = 0;
+      }
+      // Set full flag
+      telem_buffer_full = (temp_cnt == telem_buffer_head) ? 1 : 0;
+      // Update tail
+      telem_buffer_tail = temp_cnt;
+    }
+  }
+  // Update latest telem pkt
+  artibeus_set_telem_pkt(artibeus_latest_telem_pkt);
   return 0;
 }
 
@@ -128,8 +108,5 @@ void __attribute ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR(void)
   gps_timer_triggered = 1;
   TA0R = 0;
   __enable_interrupt();// A little paranoia over comp_e getting thrown
-  //Note: shutdown interrupt in librustic will handle grabbing final TA0R,
-  //because COMP_E has high priority than TimerA, TimerA will never preempt
-  //COMP_E and put TA0R and __paca_global_ovfl out of whack
 }
 
