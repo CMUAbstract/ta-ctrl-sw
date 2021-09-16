@@ -19,6 +19,7 @@
 #include <libartibeus/artibeus.h>
 #include <libartibeus/comm.h>
 #include <libartibeus/query.h>
+#include <libartibeus/backup.h>
 #include <libads/ads1115.h>
 #include <libmspuartlink/uartlink.h>
 #include <libgnss/gnss.h>
@@ -60,9 +61,10 @@ int update_telemetry() {
   }
   // Update most recent power data & averaged data structures
   artibeus_set_pwr(temp_buf);
-  // Check GPS timer and set up if necessary
   uint16_t gps_timer_set = TA0CCTL0 | CCIE;
-  if (!gps_timer_set && gps_start_count > GPS_FAIL_MAX) {
+  write_to_log(cur_ctx,&gps_start_count,sizeof(uint8_t));
+  // Check GPS timer and set up if necessary
+  if (!gps_timer_set && (gps_start_count > GPS_FAIL_MAX)) {
     GNSS_DISABLE;
     TA0CCR0 = 40000; //More like 10min
     TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE_1;
@@ -80,12 +82,17 @@ int update_telemetry() {
       TA0CCTL0 |= CCIE;
       TA0R = 0;
     }
+    write_to_log(cur_ctx,&telem_buffer_tail,sizeof(uint8_t));
+    write_to_log(cur_ctx,&telem_buffer_head,sizeof(uint8_t));
+    write_to_log(cur_ctx,&telem_buffer_full,sizeof(uint8_t));
     int good_gps = app_gps_gather();
     if (good_gps) {
       gps_start_count = 0;
       // Pack up and stuff data into ring buffer
       uint8_t temp_cnt = telem_buffer_tail;
       artibeus_set_telem_pkt(telem_buffer + temp_cnt);
+      // For squishing into an ascii packet instead of a telem packet
+      *((uint8_t *)(telem_buffer + temp_cnt)) = ASCII_TELEM;
       temp_cnt++;
       if (temp_cnt >= TELEM_BUFF_SIZE) {
         temp_cnt = 0;
@@ -99,6 +106,23 @@ int update_telemetry() {
   // Update latest telem pkt
   artibeus_set_telem_pkt(artibeus_latest_telem_pkt);
   return 0;
+}
+
+uint8_t * pop_telem_pkt() {
+  // Return pointer to head of ring
+  return &(telem_buffer[telem_buffer_tail]);
+}
+
+// A function you call _after_ the telemetry packet has definitely been
+// transmitted, as long as there's only one variable, you don't have to double
+// buffer it
+void pop_update_telem_ptrs() {
+  if (telem_buffer_head <= TELEM_BUFF_SIZE - 1) { 
+    telem_buffer_head++;
+  }
+  else {
+    telem_buffer_head = 0;
+  }
 }
 
 

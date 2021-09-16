@@ -19,6 +19,7 @@
 #include <libartibeus/artibeus.h>
 #include <libartibeus/comm.h>
 #include <libartibeus/handle_uarts.h>
+#include <libartibeus/backup.h>
 #include <libads/ads1115.h>
 #include <libmspuartlink/uartlink.h>
 #include <libgnss/gnss.h>
@@ -33,20 +34,11 @@
 
 __nv uint8_t first_init = 1;
 __nv uint8_t solar_check = 0;
+__nv uint8_t got_gps_fix = 0;
 
 #define MAGIC_NUMBER 0xABCD
 
 __nv uint16_t first_prog = MAGIC_NUMBER;
-
-
-__nv artibeus_ctx ctx0 = { ADC, -1 };
-__nv artibeus_ctx ctx1 = { ADC, -1 };
-__nv artibeus_ctx *cur_ctx = &ctx0;
-
-// We're only going to reference these here
-static __nv uint8_t backup_data[BACKUP_DATA_LEN]; // Buffer where we'll put data
-// Data structure for each double buffered entry
-static __nv dbl_buffer_entry double_buffer[DBL_BUFF_LEN];
 
 
 int main(void) {
@@ -60,23 +52,29 @@ int main(void) {
     artibeus_init();
   }
   int count;
-  //TODO make this more strategic in the future
+  //TODO move this into app code somewhere, it invalidates variables here
   app_gps_init();
   uint8_t* time_date[ARTIBEUS_TIME_DATE_SIZE];
   __delay_cycles(8000000); 
   __delay_cycles(8000000); //Try to update the time
-  app_gps_gather();
-  uint8_t* time = artibeus_get_time();
-  uint8_t* date = artibeus_get_date();
-  memcpy(time_date,time,3);
-  memcpy(time_date + 3,date,3);
-  GNSS_DISABLE;
-  EXP_ENABLE;
-  uint8_t temp_ack_count = expt_ack_count;
-  for (int i = 0; i < 10; i++) {
-    __delay_cycles(8000);
-    if (expt_ack_count > temp_ack_count) { break; }
-    expt_set_time_utc(time_date);
+  got_gps_fix = app_gps_gather();
+  if (got_gps_fix) {
+    uint8_t* time = artibeus_get_time();
+    uint8_t* date = artibeus_get_date();
+    memcpy(time_date,time,3);
+    memcpy(time_date + 3,date,3);
+    GNSS_DISABLE;
+    EXP_ENABLE;
+    libartibeus_msg_id = 0;
+    // We'll always run this through, it's init
+    for (int i = 0; i < 2; i++) {
+      expt_set_time_utc(time_date);
+      __delay_cycles(8000);
+      libartibeus_msg_id = 0;
+      expt_ack_pending = 1;
+      int temp = process_uart1();
+      if (temp == RCVD_PENDING_ACK) { expt_ack_pending = 0; break; }
+    }
   }
   COMM_ENABLE;
   // Clear transfer variables
@@ -100,9 +98,48 @@ int main(void) {
       }
       case(GET_UART0):{
         process_uart0();
+        next_task = CHECK_GNSS_TIMER;
+        break;
+      }
+      case(CHECK_GNSS_TIMER):{
+        // TODO Check send telem timer
+        // Check if there's anything in the buffer
+        if (telem_buffer_tail == telem_buffer_head && telem_buffer_full == 0) {
+          break;
+        }
+        uint8_t *telem_ptr = pop_telem_pkt();
+        for (int i = 0; i < TELEM_REPEAT_CNT; i++) {
+          libartibeus_msg_id = telem_buffer_tail;
+          comm_transmit_pkt(telem_ptr,sizeof(artibeus_telem_t) + 1);
+          __delay_cycles(80000);
+          comm_ack_pending = 1; // sanitize value
+          int temp = process_uart0();
+          if (temp == RCVD_PENDING_ACK) { comm_ack_pending = 0; break; }
+        }
+        pop_update_telem_ptrs();
+        next_task = CHECK_ASCII_TIMER;
+        break;
+      }
+      case CHECK_ASCII_TIMER: {
+        // TODO Check send expt ascii timer
+        if (artibeus_ascii_is_empty()) {
+          break;
+        }
+        uint8_t *ascii_ptr = artibeus_pop_ascii_pkt();
+        for (int i = 0; i < TELEM_REPEAT_CNT; i++) {
+          libartibeus_msg_id = expt_ascii_tail;
+          comm_transmit_pkt(ascii_ptr,ARTIBEUS_MAX_ASCII_SIZE);
+          __delay_cycles(80000);
+          comm_ack_pending = 1; // sanitize value
+          int temp = process_uart1();
+          if (temp == RCVD_PENDING_ACK) { comm_ack_pending = 0; break; }
+        }
+        artibeus_pop_update_ascii_ptrs();
         next_task = RECORD_TELEM;
         break;
       }
+      default:
+        break;
     }
     // Safely transition
     artibeus_ctx *next_ctx;
@@ -112,46 +149,4 @@ int main(void) {
     // Swap
     cur_ctx = next_ctx;
   }
-}
-
-
-void restore_from_backup(artibeus_ctx *ctx) {
-  PRINTF("Got %i items to restore\r\n",ctx->dbl_buffer_count);
-  while(ctx->dbl_buffer_count > -1) {
-    // Memcpy data
-    PRINTF("Restoring!\r\n");
-    uint8_t *source = double_buffer[ctx->dbl_buffer_count].source;
-    uint8_t *dest = double_buffer[ctx->dbl_buffer_count].dest;
-    size_t len = double_buffer[ctx->dbl_buffer_count].len;
-    memcpy(source, dest, len);
-    ctx->dbl_buffer_count--;
-  }
-  return;
-}
-
-int write_to_log(artibeus_ctx *ctx, uint8_t *data, size_t len) {
-  int16_t index = ctx->dbl_buffer_count;
-  index++;
-  if (index > DBL_BUFF_LEN) {
-    return -1;
-  }
-  PRINTF("Writing! %i, len = %i\r\n", *data, len);
-  // Get address of last entry in buffer
-  uint8_t *last_addr;
-  if (index > 0) {
-    last_addr = double_buffer[index-1].dest + double_buffer[index-1].len;
-  }
-  else {
-    // Set address to start of buffer if first entry
-    last_addr = backup_data;
-  }
-  // Add one to get to very next available address
-  last_addr++;
-  memcpy(last_addr, data, len);
-  // This is fine because we only log __nv data
-  double_buffer[index].source = data;
-  double_buffer[index].dest = last_addr;
-  double_buffer[index].len = len;
-  ctx->dbl_buffer_count++;
-  return 0;
 }

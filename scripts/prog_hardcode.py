@@ -15,11 +15,11 @@ HWID0 =65
 HWID1 = 66
 seqnum0 = 67
 seqnum1 = 68
-dest = 1
+dest = 0x12 # 0x1 -- from comm, 0x02 -- to expt
 
 BYTES_PER_CMD = 129
 
-serWrite0 = serial.Serial('/dev/ttyACM2', 115200);
+serWrite0 = serial.Serial('/dev/ttyACM1', 115200);
 
 
 SUBPAGE_00 = bytearray([
@@ -430,8 +430,8 @@ class openlst_pkt:
 
 if __name__ == "__main__":
   # Write ascii to wake up expt
-  ascii_cmd =  openlst_pkt(seq0=0,seq1=0,msg_type=ASCII,payload=wake_keys)
-  serWrite0.write(ascii_cmd.pkt)
+  #ascii_cmd =  openlst_pkt(seq0=0,seq1=0,msg_type=ASCII,payload=wake_keys)
+  #serWrite0.write(ascii_cmd.pkt)
   #print(binascii.hexlify(ascii_cmd.pkt))
   time.sleep(1)
   # Write pages

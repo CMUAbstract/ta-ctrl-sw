@@ -20,12 +20,14 @@
 #include <libartibeus/query.h>
 #include <libgnss/gnss.h>
 
-
 static uint8_t newDisable[16] = {0xA0,0xA1,0x00,0x09,0x08,0x00,0x00,
                      0x00,0x00,0x01,0x00,0x00,0x00,0x09,0x0D,0x0A};
 __nv uint8_t gps_start_count = 0;
 
 void app_gps_init() {
+  gnss_pkt_type =  INVALID;
+  gnss_pkt_counter =  0;
+  gnss_active_pkt =  0;
   GNSS_ENABLE;
   uartlink_open(2);
   // Write all sentences over to gnss
