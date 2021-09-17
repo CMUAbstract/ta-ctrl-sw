@@ -11,7 +11,7 @@
 
 
 #include <libartibeus/artibeus.h>
-
+#define SLEEP_PERIOD 40000
 
 #endif // _APP_PKTS_H_
 

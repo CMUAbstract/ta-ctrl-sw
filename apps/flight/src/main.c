@@ -76,6 +76,7 @@ int main(void) {
       if (temp == RCVD_PENDING_ACK) { expt_ack_pending = 0; break; }
     }
   }
+  init_timerA0();
   COMM_ENABLE;
   // Clear transfer variables
   // Restore any corrupted data
@@ -102,9 +103,15 @@ int main(void) {
         break;
       }
       case(CHECK_GNSS_TIMER):{
-        // TODO Check send telem timer
+        if (!gps_timer_triggered) {
+          next_task = CHECK_ASCII_TIMER;
+          break;
+        }
+        write_to_log(cur_ctx,&gps_timer_triggered,sizeof(uint8_t));
+        gps_timer_triggered = 0;
         // Check if there's anything in the buffer
         if (telem_buffer_tail == telem_buffer_head && telem_buffer_full == 0) {
+          next_task = CHECK_ASCII_TIMER;
           break;
         }
         uint8_t *telem_ptr = pop_telem_pkt();
@@ -121,7 +128,12 @@ int main(void) {
         break;
       }
       case CHECK_ASCII_TIMER: {
-        // TODO Check send expt ascii timer
+        if (!ascii_timer_triggered) {
+          next_task = CHECK_ASCII_TIMER;
+          break;
+        }
+        write_to_log(cur_ctx,&ascii_timer_triggered,sizeof(uint8_t));
+        ascii_timer_triggered = 0;
         if (artibeus_ascii_is_empty()) {
           break;
         }
@@ -150,3 +162,26 @@ int main(void) {
     cur_ctx = next_ctx;
   }
 }
+
+
+void __attribute ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR(void)
+{ //Handles overflows
+  __disable_interrupt();
+  switch(__even_in_range(TAIV,TAIV__TAIFG)) {
+    case TAIV_2: //TA0CCR1
+      TA0CCR0 += TELEM_PERIOD;
+      gps_timer_triggered = 1;
+      break;
+    case TAIV_4: //TA0CCR2
+      TA0CCR1 += EXPT_ASCII_PERIOD;
+      ascii_timer_triggered = 1;
+      break;
+    case TAIV_6: //TA0CCR3
+      TA0CCR2 += SLEEP_PERIOD;
+    default:
+      break;
+  }
+  TA0R = 0;
+  __enable_interrupt();// A little paranoia over comp_e getting thrown
+}
+

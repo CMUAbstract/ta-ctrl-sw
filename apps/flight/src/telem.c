@@ -33,8 +33,8 @@ __nv uint8_t telem_buffer_head = 0;
 __nv uint8_t telem_buffer_tail = 0;
 __nv uint8_t telem_buffer_full = 0;
 
-// leave in volatile memory
-uint16_t gps_timer_triggered = 0;
+__nv uint8_t gps_timer_triggered = 0;
+__nv uint8_t ascii_timer_triggered = 0;
 //TODO double check the procedure for need_fix
 int need_fix = -1;
 // Self contained telemetry function that gathers data, updates the most recent
@@ -61,14 +61,12 @@ int update_telemetry() {
   }
   // Update most recent power data & averaged data structures
   artibeus_set_pwr(temp_buf);
-  uint16_t gps_timer_set = TA0CCTL0 | CCIE;
+  uint16_t gps_timer_set = TA0CCTL1 | CCIE;
   write_to_log(cur_ctx,&gps_start_count,sizeof(uint8_t));
   // Check GPS timer and set up if necessary
   if (!gps_timer_set && (gps_start_count > GPS_FAIL_MAX)) {
     GNSS_DISABLE;
-    TA0CCR0 = 40000; //More like 10min
-    TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE_1;
-    TA0CCTL0 |= CCIE;
+    TA0CCTL1 |= CCIE;
     TA0R = 0;
     gps_start_count = 0;
   }
@@ -125,12 +123,11 @@ void pop_update_telem_ptrs() {
   }
 }
 
+void init_timerA0() {
+  TA0CTL = TASSEL__ACLK | MC__CONTINUOUS | ID_3; 
+}
 
-void __attribute ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR(void)
-{ //Handles overflows
-  __disable_interrupt();
-  gps_timer_triggered = 1;
-  TA0R = 0;
-  __enable_interrupt();// A little paranoia over comp_e getting thrown
+void init_expt_ascii_timer() {
+  TA0CCTL2 |= CCIE; 
 }
 
