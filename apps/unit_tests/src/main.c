@@ -263,7 +263,9 @@ int main(void) {
 #ifdef TEST_GNSS
     // GNSS check
     GNSS_ENABLE;
+    RESET_GNSS;
     uartlink_open(2);
+    __delay_cycles(80000);
     __delay_cycles(80000);
     disable_sentences();
     //for(int i = 0; i < 30; i++) {
@@ -271,8 +273,10 @@ int main(void) {
       __delay_cycles(8000000);
       PRINTF("Waiting! %u\r\n",pkt_type);
     }
+    disable_sentences();
     while(1) {
       do {
+        //disable_sentences();
         __delay_cycles(8000000); 
         PRINTF("Waiting! %u\r\n",pkt_type);
       } while (!(cur_gps_data->complete));
@@ -525,7 +529,7 @@ int main(void) {
 #endif // testing imu
 #ifdef TEST_WORMHOLE
   EXP_ENABLE;
-  COMM_ENABLE; // Required for cntrl board v0 where we mixed up power rails
+  //COMM_ENABLE; // Required for cntrl board v0 where we mixed up power rails
   while(1) {
     process_uart1(); // Expt board
     process_uart0(); // Comm board

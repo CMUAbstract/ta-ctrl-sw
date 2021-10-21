@@ -11,15 +11,16 @@ EXPT_DONE = 0x28
 KILL_KEYS = b'FORBESavePA15213'
 ASCII_MSG = b'YINZ IS JAGOFFS!'
 
-HWID0 =65
-HWID1 = 66
+HWID0 =0x61
+HWID1 = 0x74
 seqnum0 = 67
 seqnum1 = 68
-dest = 0x12 # 0x1 -- from comm, 0x02 -- to expt
+dest = 0x02 # 0x1 -- from comm, 0x02 -- to expt
 
 BYTES_PER_CMD = 129
 
-serWrite0 = serial.Serial('/dev/ttyACM1', 115200);
+#serWrite0 = serial.Serial('/dev/ttyACM1', 115200);
+serWrite0 = serial.Serial('/dev/ttyUSB0', 115200);
 
 
 SUBPAGE_00 = bytearray([

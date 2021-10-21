@@ -78,6 +78,7 @@ int main(void) {
   }
   init_timerA0();
   COMM_ENABLE;
+  EXP_ENABLE;
   // Clear transfer variables
   // Restore any corrupted data
   restore_from_backup(cur_ctx);
@@ -151,6 +152,7 @@ int main(void) {
         break;
       }
       default:
+        next_task = RECORD_TELEM;
         break;
     }
     // Safely transition
