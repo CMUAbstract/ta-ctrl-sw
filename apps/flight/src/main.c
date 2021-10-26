@@ -30,7 +30,6 @@
 #include "gps.h"
 #include "telem.h"
 
-#define SLEEP_DELAY 36864 //~9 sec at 32768/8 Hz ticks --> need to loop 10x
 
 __nv uint8_t first_init = 1;
 __nv uint8_t solar_check = 0;
@@ -40,6 +39,10 @@ __nv uint8_t got_gps_fix = 0;
 
 __nv uint16_t first_prog = MAGIC_NUMBER;
 
+// Leave volatile
+uint8_t expt_timer_triggered = 0;
+uint8_t expt_need_time = 1;
+uint8_t expt_need_jump = 1;
 
 int main(void) {
   // Make sure we hold after programming
@@ -51,34 +54,13 @@ int main(void) {
   else {
     artibeus_init();
   }
+  expt_timer_triggered = 0;
   int count;
-  //TODO move this into app code somewhere, it invalidates variables here
-  app_gps_init();
-  uint8_t* time_date[ARTIBEUS_TIME_DATE_SIZE];
-  __delay_cycles(8000000); 
-  __delay_cycles(8000000); //Try to update the time
-  got_gps_fix = app_gps_gather();
-  if (got_gps_fix) {
-    uint8_t* time = artibeus_get_time();
-    uint8_t* date = artibeus_get_date();
-    memcpy(time_date,time,3);
-    memcpy(time_date + 3,date,3);
-    GNSS_DISABLE;
-    EXP_ENABLE;
-    libartibeus_msg_id = 0;
-    // We'll always run this through, it's init
-    for (int i = 0; i < 2; i++) {
-      expt_set_time_utc(time_date);
-      __delay_cycles(8000);
-      libartibeus_msg_id = 0;
-      expt_ack_pending = 1;
-      int temp = process_uart1();
-      if (temp == RCVD_PENDING_ACK) { expt_ack_pending = 0; break; }
-    }
-  }
   init_timerA0();
   COMM_ENABLE;
-  EXP_ENABLE;
+  EXP_ENABLE; // Init expt but don't feed it anything just yet
+  //__enable_interrupt();//Maybe?
+  app_gps_init();
   // Clear transfer variables
   // Restore any corrupted data
   restore_from_backup(cur_ctx);
@@ -89,66 +71,74 @@ int main(void) {
     msp_watchdog_kick();
     switch (cur_ctx->cur_task) {
       case(RECORD_TELEM):{
+        //BIT_FLIP(1,1);
         update_telemetry();
         next_task = GET_UART1;
         break;
       }
       case(GET_UART1):{
-        process_uart1();
+        //BIT_FLIP(1,1);
+        //BIT_FLIP(1,1);
+        if (expt_timer_triggered && expt_need_time) {
+          if (expt_need_jump) {
+            // Send jump command
+            BIT_FLIP(1,2);
+            BIT_FLIP(1,2);
+            expt_ack_pending = 1;
+            expt_write_jump();
+            __delay_cycles(80000);
+            int temp = process_uart1();
+            if (temp == RCVD_PENDING_BOOTLOADER_ACK) {
+              expt_ack_pending = 0;
+              expt_need_jump = 0;
+            }
+          }
+          got_gps_fix = app_gps_gather();
+          if (got_gps_fix) {
+            BIT_FLIP(1,2);
+            uint8_t* time = artibeus_get_time();
+            uint8_t* date = artibeus_get_date();
+            uint8_t time_date[ARTIBEUS_TIME_DATE_SIZE];
+            memcpy(time_date,time,3);
+            memcpy(time_date + 3,date,3);
+            libartibeus_msg_id = 47;
+            // We'll always run this through, it's init
+            for (int i = 0; i < 2; i++) {
+              expt_set_time(time_date);
+              __delay_cycles(8000);
+              expt_ack_pending = 1;
+              int temp = process_uart1();
+              if (temp == RCVD_PENDING_ACK) {
+                expt_ack_pending = 0;
+                expt_need_time = 0;
+              break; }
+            }
+          }
+        }
+        else {
+          BIT_FLIP(1,1);
+          process_uart1();
+        }
         next_task = GET_UART0;
         break;
       }
       case(GET_UART0):{
-        process_uart0();
-        next_task = CHECK_GNSS_TIMER;
-        break;
-      }
-      case(CHECK_GNSS_TIMER):{
-        if (!gps_timer_triggered) {
-          next_task = CHECK_ASCII_TIMER;
-          break;
+        //BIT_FLIP(1,1);
+        //BIT_FLIP(1,1);
+        //BIT_FLIP(1,1);
+        int temp;
+        temp = process_uart0();
+        if (temp == RCVD_TELEM_ASCII) {
+          // Transmit packet in response (in process_uart0)
+          next_task = GET_UART0; // Make sure there aren't more requests waiting
         }
-        write_to_log(cur_ctx,&gps_timer_triggered,sizeof(uint8_t));
-        gps_timer_triggered = 0;
-        // Check if there's anything in the buffer
-        if (telem_buffer_tail == telem_buffer_head && telem_buffer_full == 0) {
-          next_task = CHECK_ASCII_TIMER;
-          break;
+        else if (temp == RCVD_BUFF_REQ_ASCII) {
+          // Transmit packet in response (in process_uart0)
+          next_task = GET_UART0; // Make sure there aren't more requests waiting
         }
-        uint8_t *telem_ptr = pop_telem_pkt();
-        for (int i = 0; i < TELEM_REPEAT_CNT; i++) {
-          libartibeus_msg_id = telem_buffer_tail;
-          comm_transmit_pkt(telem_ptr,sizeof(artibeus_telem_t) + 1);
-          __delay_cycles(80000);
-          comm_ack_pending = 1; // sanitize value
-          int temp = process_uart0();
-          if (temp == RCVD_PENDING_ACK) { comm_ack_pending = 0; break; }
+        else {
+          next_task = RECORD_TELEM;
         }
-        pop_update_telem_ptrs();
-        next_task = CHECK_ASCII_TIMER;
-        break;
-      }
-      case CHECK_ASCII_TIMER: {
-        if (!ascii_timer_triggered) {
-          next_task = CHECK_ASCII_TIMER;
-          break;
-        }
-        write_to_log(cur_ctx,&ascii_timer_triggered,sizeof(uint8_t));
-        ascii_timer_triggered = 0;
-        if (artibeus_ascii_is_empty()) {
-          break;
-        }
-        uint8_t *ascii_ptr = artibeus_pop_ascii_pkt();
-        for (int i = 0; i < TELEM_REPEAT_CNT; i++) {
-          libartibeus_msg_id = expt_ascii_tail;
-          comm_transmit_pkt(ascii_ptr,ARTIBEUS_MAX_ASCII_SIZE);
-          __delay_cycles(80000);
-          comm_ack_pending = 1; // sanitize value
-          int temp = process_uart1();
-          if (temp == RCVD_PENDING_ACK) { comm_ack_pending = 0; break; }
-        }
-        artibeus_pop_update_ascii_ptrs();
-        next_task = RECORD_TELEM;
         break;
       }
       default:
@@ -169,21 +159,9 @@ int main(void) {
 void __attribute ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR(void)
 { //Handles overflows
   __disable_interrupt();
-  switch(__even_in_range(TAIV,TAIV__TAIFG)) {
-    case TAIV_2: //TA0CCR1
-      TA0CCR0 += TELEM_PERIOD;
-      gps_timer_triggered = 1;
-      break;
-    case TAIV_4: //TA0CCR2
-      TA0CCR1 += EXPT_ASCII_PERIOD;
-      ascii_timer_triggered = 1;
-      break;
-    case TAIV_6: //TA0CCR3
-      TA0CCR2 += SLEEP_PERIOD;
-    default:
-      break;
-  }
+  expt_timer_triggered = 1;
+  gps_timer_triggered = 1;
   TA0R = 0;
-  __enable_interrupt();// A little paranoia over comp_e getting thrown
+  __enable_interrupt();
 }
 

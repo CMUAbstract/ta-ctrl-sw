@@ -11,7 +11,7 @@
 
 
 #include <libartibeus/artibeus.h>
-#define SLEEP_PERIOD 40000
+#define SLEEP_PERIOD 491520 //~120 sec at 32768/8 Hz ticks
 
 #endif // _APP_PKTS_H_
 

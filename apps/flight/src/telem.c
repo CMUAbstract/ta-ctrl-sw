@@ -25,13 +25,8 @@
 #include <libgnss/gnss.h>
 #include <liblsm9ds1/imu.h>
 #include "gps.h"
-#include "adc.h"
 #include "telem.h"
 
-__nv artibeus_telem_t telem_buffer[TELEM_BUFF_SIZE]; 
-__nv uint8_t telem_buffer_head = 0;
-__nv uint8_t telem_buffer_tail = 0;
-__nv uint8_t telem_buffer_full = 0;
 
 __nv uint8_t gps_timer_triggered = 0;
 __nv uint8_t ascii_timer_triggered = 0;
@@ -69,65 +64,49 @@ int update_telemetry() {
     TA0CCTL1 |= CCIE;
     TA0R = 0;
     gps_start_count = 0;
+    BIT_FLIP(1,1);
+    BIT_FLIP(1,1);
+    BIT_FLIP(1,1);
+    BIT_FLIP(1,1);
   }
   else if (gps_timer_triggered || !gps_timer_set) {
     gps_start_count++;
     app_gps_init();
     if (!gps_timer_set) {
       //TA0CCR0 = 40000; //~Around 10min
-      TA0CCR0 = 4000; //More like 1min
+      TA0CCR0 = TELEM_PERIOD; //More like 1min
       TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE_1;
       TA0CCTL0 |= CCIE;
       TA0R = 0;
     }
-    write_to_log(cur_ctx,&telem_buffer_tail,sizeof(uint8_t));
-    write_to_log(cur_ctx,&telem_buffer_head,sizeof(uint8_t));
-    write_to_log(cur_ctx,&telem_buffer_full,sizeof(uint8_t));
     int good_gps = app_gps_gather();
     if (good_gps) {
-      gps_start_count = 0;
       // Pack up and stuff data into ring buffer
-      uint8_t temp_cnt = telem_buffer_tail;
-      artibeus_set_telem_pkt(telem_buffer + temp_cnt);
-      // For squishing into an ascii packet instead of a telem packet
-      *((uint8_t *)(telem_buffer + temp_cnt)) = ASCII_TELEM;
-      temp_cnt++;
-      if (temp_cnt >= TELEM_BUFF_SIZE) {
-        temp_cnt = 0;
-      }
-      // Set full flag
-      telem_buffer_full = (temp_cnt == telem_buffer_head) ? 1 : 0;
-      // Update tail
-      telem_buffer_tail = temp_cnt;
+      BIT_FLIP(1,1);
+      BIT_FLIP(1,1);
+      artibeus_push_telem_pkt();
+      gps_start_count = 0;
     }
   }
-  // Update latest telem pkt
-  artibeus_set_telem_pkt(artibeus_latest_telem_pkt);
+  else {
+    // Update latest telem pkt
+      BIT_FLIP(1,1);
+      BIT_FLIP(1,1);
+      BIT_FLIP(1,1);
+    artibeus_set_telem_pkt(artibeus_latest_telem_pkt);
+  }
   return 0;
 }
 
-uint8_t * pop_telem_pkt() {
-  // Return pointer to head of ring
-  return &(telem_buffer[telem_buffer_tail]);
-}
-
-// A function you call _after_ the telemetry packet has definitely been
-// transmitted, as long as there's only one variable, you don't have to double
-// buffer it
-void pop_update_telem_ptrs() {
-  if (telem_buffer_head <= TELEM_BUFF_SIZE - 1) { 
-    telem_buffer_head++;
-  }
-  else {
-    telem_buffer_head = 0;
-  }
-}
 
 void init_timerA0() {
-  TA0CTL = TASSEL__ACLK | MC__CONTINUOUS | ID_3; 
+  TA0CCR0 = TELEM_PERIOD;
+  TA0CCTL0 |= CCIE;
+  TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE;
 }
 
 void init_expt_ascii_timer() {
-  TA0CCTL2 |= CCIE; 
+  TA0CCTL2 |= CCIE;
 }
+
 
