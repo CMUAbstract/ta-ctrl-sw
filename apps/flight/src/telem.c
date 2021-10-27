@@ -27,11 +27,9 @@
 #include "gps.h"
 #include "telem.h"
 
+// NV so we get telem packets even if we're experiencing frequent failures
+__nv uint8_t telem_timer_triggered = 0;
 
-__nv uint8_t gps_timer_triggered = 0;
-__nv uint8_t ascii_timer_triggered = 0;
-//TODO double check the procedure for need_fix
-int need_fix = -1;
 // Self contained telemetry function that gathers data, updates the most recent
 // query-able data elements, and updates the packets that will get transmitted.
 int update_telemetry() {
@@ -56,45 +54,44 @@ int update_telemetry() {
   }
   // Update most recent power data & averaged data structures
   artibeus_set_pwr(temp_buf);
-  uint16_t gps_timer_set = TA0CCTL1 | CCIE;
-  write_to_log(cur_ctx,&gps_start_count,sizeof(uint8_t));
-  // Check GPS timer and set up if necessary
-  if (!gps_timer_set && (gps_start_count > GPS_FAIL_MAX)) {
-    GNSS_DISABLE;
-    TA0CCTL1 |= CCIE;
-    TA0R = 0;
-    gps_start_count = 0;
-    BIT_FLIP(1,1);
-    BIT_FLIP(1,1);
-    BIT_FLIP(1,1);
-    BIT_FLIP(1,1);
-  }
-  else if (gps_timer_triggered || !gps_timer_set) {
-    gps_start_count++;
-    app_gps_init();
-    if (!gps_timer_set) {
-      //TA0CCR0 = 40000; //~Around 10min
-      TA0CCR0 = TELEM_PERIOD; //More like 1min
-      TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE_1;
-      TA0CCTL0 |= CCIE;
-      TA0R = 0;
-    }
+  write_to_log(cur_ctx,&gps_fail_count,sizeof(uint8_t));
+  write_to_log(cur_ctx,&gps_timer,sizeof(uint8_t));
+  // TODO check nv vars changed
+  if (gps_on) {
+    BIT_FLIP(1,2);
+    BIT_FLIP(1,2);
+    // Try to read
     int good_gps = app_gps_gather();
     if (good_gps) {
-      // Pack up and stuff data into ring buffer
-      BIT_FLIP(1,1);
-      BIT_FLIP(1,1);
-      artibeus_push_telem_pkt();
-      gps_start_count = 0;
+      // if fix
+      gps_fail_count = 0;
+      gps_timer = 0;
+    }
+    else {
+      // if no fix, update fail count
+      gps_fail_count++;
+      // if fail count too high, disable gnss
+      if (gps_fail_count > GPS_FAIL_MAX) {
+        uartlink_close(2);
+        GNSS_DISABLE;
+        gps_on = 0;
+        gps_timer = 0;
+      }
     }
   }
   else {
-    // Update latest telem pkt
-      BIT_FLIP(1,1);
-      BIT_FLIP(1,1);
-      BIT_FLIP(1,1);
-    artibeus_set_telem_pkt(artibeus_latest_telem_pkt);
+    BIT_FLIP(1,2);
+    BIT_FLIP(1,2);
+    BIT_FLIP(1,2);
+    // Check if we've waited long enough
+    if (gps_timer > GPS_FAIL_WAIT) {
+      // Re-init
+      app_gps_init();
+      gps_timer = 0;
+      gps_fail_count = 0;
+    }
   }
+  artibeus_push_telem_pkt();
   return 0;
 }
 
@@ -102,6 +99,7 @@ int update_telemetry() {
 void init_timerA0() {
   TA0CCR0 = TELEM_PERIOD;
   TA0CCTL0 |= CCIE;
+  TA0EX0 = 0x7; // Divide by 8
   TA0CTL = TASSEL__ACLK | MC__UP | ID_3 | TAIE;
 }
 

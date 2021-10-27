@@ -17,12 +17,19 @@
 #include <libmspuartlink/uartlink.h>
 
 #include <libartibeus/artibeus.h>
+#include <libartibeus/handle_uarts.h>
 #include <libartibeus/query.h>
 #include <libgnss/gnss.h>
 
 static uint8_t newDisable[16] = {0xA0,0xA1,0x00,0x09,0x08,0x00,0x00,
                      0x00,0x00,0x01,0x00,0x00,0x00,0x09,0x0D,0x0A};
-__nv uint8_t gps_start_count = 0;
+
+// Want to be able to track behavior over power failures if necessary
+__nv uint8_t gps_timer = 0;
+__nv uint8_t gps_fail_count = 0;
+
+//Volatile
+uint8_t gps_on = 0;
 
 void app_gps_init() {
   gnss_pkt_type =  INVALID;
@@ -36,6 +43,7 @@ void app_gps_init() {
   // One more time for good measure
   uartlink_send_basic(2,newDisable,16);
   __delay_cycles(80000);
+  gps_on = 1;
   return;
 }
 
@@ -74,6 +82,7 @@ int app_gps_gather() {
     artibeus_set_gps(gps_dec_buf);
     artibeus_set_time(time_dec_buf);
     artibeus_set_date(date_dec_buf);
+    if (libartibeus_uartlink2_pkt_error) { return 0;}
     return 1;
   }
   return 0;

@@ -44,6 +44,7 @@ uint8_t expt_timer_triggered = 0;
 uint8_t expt_need_time = 1;
 uint8_t expt_need_jump = 1;
 
+
 int main(void) {
   // Make sure we hold after programming
   // Pull this pin to ground externally BEFORE programming
@@ -59,8 +60,7 @@ int main(void) {
   init_timerA0();
   COMM_ENABLE;
   EXP_ENABLE; // Init expt but don't feed it anything just yet
-  //__enable_interrupt();//Maybe?
-  app_gps_init();
+  app_gps_init(); // Turn on gps
   // Clear transfer variables
   // Restore any corrupted data
   restore_from_backup(cur_ctx);
@@ -72,18 +72,19 @@ int main(void) {
     switch (cur_ctx->cur_task) {
       case(RECORD_TELEM):{
         //BIT_FLIP(1,1);
-        update_telemetry();
+        if (telem_timer_triggered) {
+          update_telemetry();
+          telem_timer_triggered = 0;
+        }
         next_task = GET_UART1;
         break;
       }
       case(GET_UART1):{
         //BIT_FLIP(1,1);
         //BIT_FLIP(1,1);
-        if (expt_timer_triggered && expt_need_time) {
+        if (expt_timer_triggered || expt_need_time) {
           if (expt_need_jump) {
             // Send jump command
-            BIT_FLIP(1,2);
-            BIT_FLIP(1,2);
             expt_ack_pending = 1;
             expt_write_jump();
             __delay_cycles(80000);
@@ -95,7 +96,6 @@ int main(void) {
           }
           got_gps_fix = app_gps_gather();
           if (got_gps_fix) {
-            BIT_FLIP(1,2);
             uint8_t* time = artibeus_get_time();
             uint8_t* date = artibeus_get_date();
             uint8_t time_date[ARTIBEUS_TIME_DATE_SIZE];
@@ -159,8 +159,10 @@ int main(void) {
 void __attribute ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR(void)
 { //Handles overflows
   __disable_interrupt();
+  BIT_FLIP(1,2);
   expt_timer_triggered = 1;
-  gps_timer_triggered = 1;
+  telem_timer_triggered = 1;
+  gps_timer++;
   TA0R = 0;
   __enable_interrupt();
 }
