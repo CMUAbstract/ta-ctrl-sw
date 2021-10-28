@@ -55,20 +55,21 @@ int app_gps_gather() {
     uint8_t date_dec_buf[ARTIBEUS_DATE_SIZE];
 
     gps_dec_buf[0] = (DEGS_LAT(cur_gps_data->lat)) & 0xff;
-    gps_dec_buf[1] = MIN_LAT(cur_gps_data->lat) & (0xff << 8);//TODO:remove!
-    gps_dec_buf[2] = MIN_LAT(cur_gps_data->lat) & (0xff);
-    gps_dec_buf[3] = (uint8_t)((SECS_LAT(cur_gps_data->lat) & (0xff << 8)) >> 8);
-    gps_dec_buf[4] = SECS_LAT(cur_gps_data->lat) & (0xff);
-    gps_dec_buf[5] = (uint8_t)((DEGS_LONG(cur_gps_data->longi) &
+    //gps_dec_buf[1] = MIN_LAT(cur_gps_data->lat) & (0xff << 8);//TODO:remove!
+    gps_dec_buf[1] = MIN_LAT(cur_gps_data->lat) & (0xff);
+    gps_dec_buf[2] = (uint8_t)((SECS_LAT(cur_gps_data->lat) & (0xff << 8)) >> 8);
+    gps_dec_buf[3] = SECS_LAT(cur_gps_data->lat) & (0xff);
+    gps_dec_buf[4] = (uint8_t)((DEGS_LONG(cur_gps_data->longi) &
                                           (0xff << 8)) >> 8);
-    gps_dec_buf[6] = DEGS_LONG(cur_gps_data->longi) & (0xff);
-    gps_dec_buf[7] = (uint8_t)((MIN_LONG(cur_gps_data->longi) &
+    gps_dec_buf[5] = DEGS_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[6] = (uint8_t)((MIN_LONG(cur_gps_data->longi) &
                                           (0xff << 8)) >> 8);
-    gps_dec_buf[8] = MIN_LONG(cur_gps_data->longi) & (0xff);
-    gps_dec_buf[9] = (uint8_t)((SECS_LONG(cur_gps_data->longi) &
+    gps_dec_buf[7] = MIN_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[8] = (uint8_t)((SECS_LONG(cur_gps_data->longi) &
                                           (0xff << 8)) >> 8);
-    gps_dec_buf[10] = SECS_LONG(cur_gps_data->longi) & (0xff);
-    gps_dec_buf[11] = (NS(cur_gps_data->lat) << 1 ) | EW(cur_gps_data->longi);
+    gps_dec_buf[9] = SECS_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[10] = (NS(cur_gps_data->lat) << 1 ) | EW(cur_gps_data->longi);
+    gps_dec_buf[11] = 0; // 11th byte is a counter for how old this is
 
     time_dec_buf[0] = UTC_HRS(cur_gps_data->time);
     time_dec_buf[1] = UTC_MMS(cur_gps_data->time);
@@ -82,7 +83,10 @@ int app_gps_gather() {
     artibeus_set_gps(gps_dec_buf);
     artibeus_set_time(time_dec_buf);
     artibeus_set_date(date_dec_buf);
-    if (libartibeus_uartlink2_pkt_error) { return 0;}
+    if (libartibeus_uartlink2_pkt_error) { 
+      gps_dec_buf[11] = 1; // Set error code
+      return 0;
+    }
     return 1;
   }
   return 0;
