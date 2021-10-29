@@ -57,17 +57,17 @@ int app_gps_gather() {
     gps_dec_buf[0] = (DEGS_LAT(cur_gps_data->lat)) & 0xff;
     //gps_dec_buf[1] = MIN_LAT(cur_gps_data->lat) & (0xff << 8);//TODO:remove!
     gps_dec_buf[1] = MIN_LAT(cur_gps_data->lat) & (0xff);
-    gps_dec_buf[2] = (uint8_t)((SECS_LAT(cur_gps_data->lat) & (0xff << 8)) >> 8);
-    gps_dec_buf[3] = SECS_LAT(cur_gps_data->lat) & (0xff);
-    gps_dec_buf[4] = (uint8_t)((DEGS_LONG(cur_gps_data->longi) &
+    gps_dec_buf[2] = SECS_LAT(cur_gps_data->lat) & (0xff);
+    gps_dec_buf[3] = (uint8_t)((SECS_LAT(cur_gps_data->lat) & (0xff << 8)) >> 8);
+    gps_dec_buf[4] = DEGS_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[5] = (uint8_t)((DEGS_LONG(cur_gps_data->longi) &
                                           (0xff << 8)) >> 8);
-    gps_dec_buf[5] = DEGS_LONG(cur_gps_data->longi) & (0xff);
-    gps_dec_buf[6] = (uint8_t)((MIN_LONG(cur_gps_data->longi) &
+    gps_dec_buf[6] = MIN_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[7] = (uint8_t)((MIN_LONG(cur_gps_data->longi) &
                                           (0xff << 8)) >> 8);
-    gps_dec_buf[7] = MIN_LONG(cur_gps_data->longi) & (0xff);
-    gps_dec_buf[8] = (uint8_t)((SECS_LONG(cur_gps_data->longi) &
+    gps_dec_buf[8] = SECS_LONG(cur_gps_data->longi) & (0xff);
+    gps_dec_buf[9] = (uint8_t)((SECS_LONG(cur_gps_data->longi) &
                                           (0xff << 8)) >> 8);
-    gps_dec_buf[9] = SECS_LONG(cur_gps_data->longi) & (0xff);
     gps_dec_buf[10] = (NS(cur_gps_data->lat) << 1 ) | EW(cur_gps_data->longi);
     gps_dec_buf[11] = 0; // 11th byte is a counter for how old this is
 

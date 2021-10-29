@@ -146,9 +146,9 @@ artibeus_push_telem_pkt();// No args, we'll just push junk
         break;
       }
       case(GET_UART0):{
-        //BIT_FLIP(1,1);
-        //BIT_FLIP(1,1);
-        //BIT_FLIP(1,1);
+        BIT_FLIP(1,1);
+        BIT_FLIP(1,1);
+        BIT_FLIP(1,1);
         int temp;
         temp = process_uart0();
         if (temp == RCVD_TELEM_ASCII) {

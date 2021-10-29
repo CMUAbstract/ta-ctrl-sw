@@ -27,8 +27,8 @@
 #include "gps.h"
 #include "telem.h"
 
-// NV so we get telem packets even if we're experiencing frequent failures
-__nv uint8_t telem_timer_triggered = 0;
+//Volatile and initialized to 1 so we get telem packets even if we're experiencing frequent failures
+uint8_t telem_timer_triggered = 1;
 
 // Self contained telemetry function that gathers data, updates the most recent
 // query-able data elements, and updates the packets that will get transmitted.
