@@ -103,20 +103,19 @@ artibeus_push_telem_pkt();// No args, we'll just push junk
         break;
       }
       case(GET_UART1):{
-        //BIT_FLIP(1,1);
-        //BIT_FLIP(1,1);
-        if (expt_timer_triggered || expt_need_time) {
-          if (expt_need_jump) {
-            // Send jump command
-            expt_ack_pending = 1;
-            expt_write_jump();
-            __delay_cycles(80000);
-            int temp = process_uart1();
-            if (temp == RCVD_PENDING_BOOTLOADER_ACK) {
-              expt_ack_pending = 0;
-              expt_need_jump = 0;
-            }
+        // Handle jump here
+        if (expt_need_jump && expt_timer_triggered) {
+          // Send jump command
+          expt_ack_pending = 1;
+          expt_write_jump();
+          __delay_cycles(80000);
+          int temp = process_uart1();
+          if (temp == RCVD_PENDING_BOOTLOADER_ACK) {
+            expt_ack_pending = 0;
+            expt_need_jump = 0;
           }
+        }
+        if ((expt_timer_triggered || expt_need_time) && !expt_need_jump) {
           got_gps_fix = app_gps_gather();
           if (got_gps_fix) {
             uint8_t* time = artibeus_get_time();
