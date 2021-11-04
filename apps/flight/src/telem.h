@@ -10,6 +10,6 @@ void init_expt_ascii_timer();
 #define TELEM_REPEAT_CNT 2
 extern uint8_t telem_timer_triggered;
 
-//#define TELEM_PERIOD 0x8700 // ~60 seconds
-#define TELEM_PERIOD 3456 //TODO temporary!
+#define TELEM_PERIOD 0x8700 // ~60 seconds
+//#define TELEM_PERIOD 3456 //TODO temporary!
 
