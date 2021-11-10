@@ -81,8 +81,12 @@ artibeus_push_telem_pkt();// No args, we'll just push junk
   expt_timer_triggered = 0;
   int count;
   init_timerA0();
-  COMM_ENABLE;
   EXP_ENABLE; // Init expt but don't feed it anything just yet
+  COMM_ENABLE;
+  __delay_cycles(800000); 
+  GPIO(LIBARTIBEUS_PORT_EXP_nRST, DIR) |=  BIT(LIBARTIBEUS_PIN_EXP_nRST);
+  GPIO(LIBARTIBEUS_PORT_EXP_nRST, OUT) |=  BIT(LIBARTIBEUS_PIN_EXP_nRST);
+  RESET_EXP;
   app_gps_init(); // Turn on gps
   // Clear transfer variables
   // Restore any corrupted data
@@ -94,7 +98,6 @@ artibeus_push_telem_pkt();// No args, we'll just push junk
     msp_watchdog_kick();
     switch (cur_ctx->cur_task) {
       case(RECORD_TELEM):{
-        //BIT_FLIP(1,1);
         if (telem_timer_triggered) {
           update_telemetry();
           telem_timer_triggered = 0;
@@ -106,6 +109,10 @@ artibeus_push_telem_pkt();// No args, we'll just push junk
         // Handle jump here
         if (expt_need_jump && expt_timer_triggered) {
           // Send jump command
+          BIT_FLIP(1,2);
+          BIT_FLIP(1,2);
+          BIT_FLIP(1,2);
+          BIT_FLIP(1,2);
           expt_ack_pending = 1;
           expt_write_jump();
           __delay_cycles(80000);
@@ -137,17 +144,14 @@ artibeus_push_telem_pkt();// No args, we'll just push junk
             }
           }
         }
-        else {
-          BIT_FLIP(1,1);
-          process_uart1();
-        }
+        /*BIT_FLIP(1,1);
+        BIT_FLIP(1,1);
+        BIT_FLIP(1,1);*/
+        process_uart1();
         next_task = GET_UART0;
         break;
       }
       case(GET_UART0):{
-        BIT_FLIP(1,1);
-        BIT_FLIP(1,1);
-        BIT_FLIP(1,1);
         int temp;
         temp = process_uart0();
         if (temp == RCVD_TELEM_ASCII) {

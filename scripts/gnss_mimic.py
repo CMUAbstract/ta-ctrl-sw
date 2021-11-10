@@ -33,6 +33,7 @@ while 1:
   for repeat in range(0,10):
     time.sleep(1)
     serWrite0.write(goodRMC)
+    continue; #TODO take this out!!!
     for i in range(6):
       lsb = goodRMC[12 - i]
       if lsb != 0x39:
@@ -43,9 +44,11 @@ while 1:
       else:
         goodRMC[12 - i] = 0x30
         badRMC[12 - i] = 0x30
-    for elem in goodRMC:
-      print chr(elem),
-  for repeat in range(0,10):
+    print("Good")
+    #for elem in goodRMC:
+    #  print chr(elem),
+  continue # TODO take this out!!!
+  for repeat in range(0,30):
     time.sleep(1)
     serWrite0.write(badRMC)
     for i in range(6):
@@ -58,7 +61,6 @@ while 1:
       else:
         goodRMC[12 - i] = 0x30
         badRMC[12 - i] = 0x30
-    for elem in badRMC:
-      print chr(elem),
+    print("bad")
   print()
 

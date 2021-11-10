@@ -36,8 +36,8 @@ __nv uint8_t solar_check = 0;
 
 __nv uint16_t first_prog = MAGIC_NUMBER;
 
-__nv artibeus_ctx ctx0 = { ADC, -1 };
-__nv artibeus_ctx ctx1 = { ADC, -1 };
+__nv artibeus_ctx ctx0 = { GET_UART1, -1 };
+__nv artibeus_ctx ctx1 = { GET_UART1, -1 };
 __nv artibeus_ctx *cur_ctx = &ctx0;
 
 

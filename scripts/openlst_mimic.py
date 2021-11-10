@@ -23,7 +23,7 @@ serWrite0 = serial.Serial('/dev/ttyUSB0', 115200);
 
 short_len = 0x6
 ack_message = bytearray([ESP_BYTE0, ESP_BYTE1, short_len, 0x61, 0x74,
-seqnum0, seqnum1, 0x0a, ACK])
+seqnum0, seqnum1, 0x02, ACK])
 
 bootloader_ack_message = bytearray([ESP_BYTE0, ESP_BYTE1, short_len, 0x61, 0x74,
 seqnum0, seqnum1, 0x02, BOOTLOADER_ACK])
@@ -94,7 +94,7 @@ set_tle = bytearray([0x22, 0x69, 0xab, 0x61, 0x74, 0x02, 0x00, 0x02, 0x11, 0x54,
 #  time.sleep(1)
 #  serWrite0.write(bootloader_ack_message)
 #  time.sleep(10)
-
+#
 
 while(1):
   serWrite0.write(ack_message)

@@ -1,0 +1,35 @@
+Power system flat sat test notes:
+
+Charge time ~30min to go from 1.7V to on (it did appear to turn on at 5.33V)
+
+Solar panel receivevs 67kLux and 1040 W/m^2 with power turned all the way down
+
+Can't program when cap voltage is up above 5.4V...
+
+Need to disconnect the programmig launchpad when actually running, not sure why
+
+Even doing minimal stuff, we do discharge form 5.4V to 1.95 in ~30 minutes. This
+means the device does turn off.
+
+
+Mechanical notes:
+Figure 8 around screws on end opposite kill switches
+Loop around end of antenna **3**
+Use two people pulling with tweezers to get things really tight
+Double knot
+Hold down antenna while cutting off excess
+
+
+Extra Fireline is in the box.
+
+Final programming procedures:
+-Drain caps all of the way
+-Program ctrl with dbg1 grounded
+-remove power and programming pins, finally remove ground
+-put kapton back in place
+-tie down burn wire
+-test that we still charge
+-drain cap again
+-drain...
+-drain..
+-drain.
